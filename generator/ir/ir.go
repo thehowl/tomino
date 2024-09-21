@@ -26,7 +26,7 @@ const (
 	JSONOmitEmpty // `json:",omitempty"`
 )
 
-func (t TagFlag) String(s string) string {
+func (t TagFlag) String() string {
 	return strings.Join(t.strings(), ",")
 }
 
@@ -174,6 +174,10 @@ func (p *StructField) ParseTag(tag reflect.StructTag) (skip bool) {
 	return
 }
 
+func (p *StructField) String() string {
+	return fmt.Sprintf("%04d=%s[%s] { %v }", p.BinFieldNum, p.Name, p.TagFlag.String(), p.Record)
+}
+
 func (p *StructField) Tag() []byte {
 	const (
 		recordTypeVarint = 0
@@ -201,7 +205,7 @@ func (p *StructField) Tag() []byte {
 }
 
 func (p *ScalarRecord) IsUnsigned() bool {
-	switch p.Name{
+	switch p.Name {
 	case "uint", "uint8", "uint16", "uint32", "uint64":
 		return true
 	case "int", "int8", "int16", "int32", "int64":

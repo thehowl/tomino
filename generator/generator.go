@@ -84,6 +84,8 @@ func parse(tp types.Type) (ir.Record, error) {
 	case *types.Slice:
 		panic("not implemented")
 	case *types.Named:
+		// TODO: should centralize names in a registry so we re-use encoders.
+		// TODO: should understand a type having AminoMarshal / AminoUnmarshal.
 		parsed, err := parse(tp.Underlying())
 		if err != nil {
 			return nil, err
