@@ -13,6 +13,16 @@ used by the go marshaler to other generators.
 
 We can make it happen.
 
+## Status
+
+Very premature. I don't know if I'll have the time to get this to MVP, but I'll
+sure as hell try.
+
+If the vision with this thing succeeds, we should at the very least have a tool
+to create amino marshalers/unmarshalers outside of Go. If this vision succeeds
+tremendously, we might be able to replace the current usages in
+[gnolang/gno](https://github.com/gnolang/gno) with this package.
+
 ## Binary encoding
 
 Heavily drawn from [protobuf's documentation "Encoding" page](https://protobuf.dev/programming-guides/encoding/#cheat-sheet).
