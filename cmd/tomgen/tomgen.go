@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/thehowl/tomino/generator"
+	"github.com/thehowl/tomino/generator/ir"
+	gotarget "github.com/thehowl/tomino/generator/targets/go"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -49,6 +51,7 @@ func run(args []string) error {
 		return fmt.Errorf("loading packages: %w", err)
 	}
 
+	records := make([]*ir.StructRecord, 0, len(qsym))
 	for _, sym := range qsym {
 		pos := slices.IndexFunc(pkgs, func(pkg *packages.Package) bool { return pkg.PkgPath == sym.pkg })
 		if pos < 0 {
@@ -60,8 +63,14 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(rec)
+		records = append(records, rec)
 	}
+	err = gotarget.Write(os.Stdout, records)
+	if err != nil {
+		return err
+	}
+	// TODO: For go specifically, we should codegen both the target, but then do
+	// converter methods as well.
 
 	return nil
 }
