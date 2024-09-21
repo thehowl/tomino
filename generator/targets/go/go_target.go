@@ -21,6 +21,6 @@ var tpl = template.Must(template.New("").
 	}).
 	Parse(templateSource))
 
-func Write(w io.Writer, messages []*ir.StructRecord) error {
+func Write(w io.Writer, messages []ir.StructRecord) error {
 	return tpl.ExecuteTemplate(w, "main", messages)
 }

@@ -51,7 +51,7 @@ func run(args []string) error {
 		return fmt.Errorf("loading packages: %w", err)
 	}
 
-	records := make([]*ir.StructRecord, 0, len(qsym))
+	records := make([]ir.StructRecord, 0, len(qsym))
 	for _, sym := range qsym {
 		pos := slices.IndexFunc(pkgs, func(pkg *packages.Package) bool { return pkg.PkgPath == sym.pkg })
 		if pos < 0 {
@@ -64,6 +64,9 @@ func run(args []string) error {
 			return err
 		}
 		records = append(records, rec)
+		if err := rec.Validate(); err != nil {
+			return fmt.Errorf("validating IR for %s.%s: %w", sym.pkg, sym.symbol, err)
+		}
 	}
 	err = gotarget.Write(os.Stdout, records)
 	if err != nil {

@@ -9,19 +9,19 @@ import (
 )
 
 // Parse XXX
-func Parse(obj types.Object) (*ir.StructRecord, error) {
+func Parse(obj types.Object) (ir.StructRecord, error) {
 	tn, ok := obj.(*types.TypeName)
 	if !ok {
-		return nil, fmt.Errorf("invalid symbol: %T", obj)
+		return ir.StructRecord{}, fmt.Errorf("invalid symbol: %T", obj)
 	}
 
 	// TODO: does this work with aliases? (maybe it shouldn't.)
 	tp := tn.Type()
 	rec, err := parse(tp)
 	if err != nil {
-		return nil, err
+		return ir.StructRecord{}, err
 	}
-	return rec.(*ir.StructRecord), nil
+	return rec.(ir.StructRecord), nil
 }
 
 func parse(tp types.Type) (ir.Record, error) {
@@ -53,18 +53,16 @@ func parse(tp types.Type) (ir.Record, error) {
 			}
 			flds = append(flds, sf)
 		}
-		return &ir.StructRecord{Fields: flds}, nil
+		return ir.StructRecord{Fields: flds}, nil
 	case *types.Basic:
 		// TODO: does this understand rune == int32 and byte == uint8?
 		// if not, let's use tp.Kind() instead.
-		switch tp.Name() {
-		case "bool",
-			"int", "int8", "int16", "int32", "int64",
-			"uint", "uint8", "uint16", "uint32", "uint64",
-			"float32", "float64":
-			return &ir.ScalarRecord{Name: tp.Name()}, nil
-		case "string":
-			return &ir.BytesRecord{String: true}, nil
+		sr := ir.ScalarRecord{Name: tp.Name()}
+		switch {
+		case sr.Name == "string":
+			return ir.BytesRecord{String: true}, nil
+		case sr.Validate() == nil:
+			return sr, nil
 		default:
 			return nil, fmt.Errorf("unsupported basic type: %v", tp.Name())
 		}
@@ -80,7 +78,7 @@ func parse(tp types.Type) (ir.Record, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &ir.OptionalRecord{Elem: v}, nil
+		return ir.OptionalRecord{Elem: v}, nil
 	case *types.Slice:
 		panic("not implemented")
 	case *types.Named:
@@ -90,9 +88,10 @@ func parse(tp types.Type) (ir.Record, error) {
 		if err != nil {
 			return nil, err
 		}
-		if str, ok := parsed.(*ir.StructRecord); ok {
+		if str, ok := parsed.(ir.StructRecord); ok {
 			str.Name = tp.Obj().Name()
 			str.Source = tp.String()
+			return str, nil
 		}
 		return parsed, err
 	default:

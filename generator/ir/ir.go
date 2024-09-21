@@ -2,6 +2,7 @@ package ir
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"reflect"
 	"slices"
@@ -54,6 +55,7 @@ func (t TagFlag) Has(s string) bool {
 type (
 	Record interface {
 		Kind() string
+		Validate() error
 		assertRecord()
 	}
 
@@ -110,20 +112,64 @@ type (
 
 func (StructRecord) assertRecord() {}
 func (StructRecord) Kind() string  { return "struct" }
+func (s StructRecord) Validate() error {
+	for _, fld := range s.Fields {
+		// can only use fixed flags on appropriate types.
+		if fld.TagFlag&BinFixed64 != 0 {
+			switch fld.Record {
+			case ScalarRecord{Name: "uint64"}, ScalarRecord{Name: "int64"}, ScalarRecord{Name: "float64"}:
+			default:
+				return fmt.Errorf("invalid record for usage with fixed64: %v", fld.Record)
+			}
+		}
+		if fld.TagFlag&BinFixed32 != 0 {
+			switch fld.Record {
+			case ScalarRecord{Name: "uint32"}, ScalarRecord{Name: "int32"}, ScalarRecord{Name: "float32"}:
+			default:
+				return fmt.Errorf("invalid record for usage with fixed32: %v", fld.Record)
+			}
+		}
+		if err := fld.Record.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func (ScalarRecord) assertRecord() {}
 func (ScalarRecord) Kind() string  { return "scalar" }
+func (s ScalarRecord) Validate() error {
+	switch s.Name {
+	case "bool",
+		"int", "int8", "int16", "int32", "int64",
+		"uint", "uint8", "uint16", "uint32", "uint64",
+		"float32", "float64":
+		return nil
+	default:
+		return fmt.Errorf("invalid scalar record: %q", s.Name)
+	}
+}
 
 func (OptionalRecord) assertRecord() {}
 func (OptionalRecord) Kind() string  { return "optional" }
+func (or OptionalRecord) Validate() error {
+	if or.Elem == nil {
+		return errors.New("OptionalRecord on nil")
+	}
+	return or.Elem.Validate()
+}
 
 func (BytesRecord) assertRecord() {}
 func (BytesRecord) Kind() string  { return "bytes" }
+func (BytesRecord) Validate() error {
+	return nil
+}
 
 var (
 	_ Record = StructRecord{}
 	_ Record = ScalarRecord{}
 	_ Record = OptionalRecord{}
+	_ Record = BytesRecord{}
 )
 
 func (p *StructField) ParseTag(tag reflect.StructTag) (skip bool) {
@@ -174,11 +220,11 @@ func (p *StructField) ParseTag(tag reflect.StructTag) (skip bool) {
 	return
 }
 
-func (p *StructField) String() string {
+func (p StructField) String() string {
 	return fmt.Sprintf("%04d=%s[%s] { %v }", p.BinFieldNum, p.Name, p.TagFlag.String(), p.Record)
 }
 
-func (p *StructField) Tag() []byte {
+func (p StructField) Tag() []byte {
 	const (
 		recordTypeVarint = 0
 		recordTypeI64    = 1
@@ -189,12 +235,12 @@ func (p *StructField) Tag() []byte {
 	// NOTE: here we don't validate whether the type should be a BinFixed64/32
 	// (TODO)
 	x := uint64(p.BinFieldNum) << 3
-	sr, _ := p.Record.(*ScalarRecord)
-	if p.TagFlag&BinFixed64 != 0 || (sr != nil && sr.Name == "float64") {
+	sr, _ := p.Record.(ScalarRecord)
+	if p.TagFlag&BinFixed64 != 0 || sr.Name == "float64" {
 		x |= recordTypeI64
-	} else if p.TagFlag&BinFixed32 != 0 || (sr != nil && sr.Name == "float32") {
+	} else if p.TagFlag&BinFixed32 != 0 || sr.Name == "float32" {
 		x |= recordTypeI32
-	} else if _, ok := p.Record.(*ScalarRecord); ok {
+	} else if _, ok := p.Record.(ScalarRecord); ok {
 		x |= recordTypeVarint
 	} else {
 		x |= recordTypeLen
@@ -204,7 +250,7 @@ func (p *StructField) Tag() []byte {
 	return buf[:binary.PutUvarint(buf[:], x)]
 }
 
-func (p *ScalarRecord) IsUnsigned() bool {
+func (p ScalarRecord) IsUnsigned() bool {
 	switch p.Name {
 	case "uint", "uint8", "uint16", "uint32", "uint64":
 		return true
