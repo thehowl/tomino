@@ -1,15 +1,32 @@
 # tomino
 
-An amino specification and corresponding implementation in Go.
+A code-generated drop-in replacement for [amino], creating minimal 0-dependency
+marshalers with no reflection. **See the [status](#status).**
 
-The specification is meant to provide a clear path for implementation in other
-languages without great hassle. The implementation is designed to be minimal and
-explicit (if possible, no reflection needed; this is achieved mostly through
-conscious code generation).
+```mermaid
+flowchart TD
+    GoSource[Go source files] --> Go
+    Go["Parsed source
+(_x/tool/packages_)"] -->|generator| IR["Intermediate Representation
+(_generator/ir_)"]
+    IR -->|generator/target/go| OutGo[Go Output]
+    IR -->|TODO| OutJS[JavaScript Output]
+    IR -->|TODO| OutZig[Zig Output]
+    IR --> Etc[...]
+```
 
-The implementation is also designed to easily be usable to create other code
-generators; by being able to parse go code and handing off the same information
-used by the go marshaler to other generators.
+## Objectives
+
+- `< 5000` lines of non-test code, for go-targeted generation.
+- Simple IR to write Amino encoders and decoders in other languages, both
+  directly in Go (similarly to [generator/targets/go](./generator/targets/go),
+  or by marshaling into Amino/JSON and parsing in another language.
+- No reflection needed; support for interfaces using type switches on all
+  possible registered types.
+- Inspectable and simple generated code (one target file, no dependencies).
+- Faster than Amino+Reflect and Amino+Protobuf. (And maybe, even protobuf.)
+- Eventually, hand-written specifications on binary encoding, go type parsing,
+  and IR (and how to build support in other languages).
 
 We can make it happen.
 
@@ -100,5 +117,6 @@ An encoder and decoder may be generated for any
 [type declaration](https://go.dev/ref/spec#Type_declarations).
 Names are resolved, until we arrive at a
 
+[amino]: https://github.com/gnolang/gno/tree/master/tm2/pkg/amino
 [language]: #language-specification
 [varint]: #base-128-varint
