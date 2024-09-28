@@ -38,23 +38,26 @@ struct {
 		// field number {{ .BinFieldNum }}
 		b = append(b, {{ range .Tag }}{{ . }}, {{ end }})
 		{
-			bprev := b
-			b := make([]byte, 2, 16) {{/*- TODO: better "guess" for cap. */}}
+			bprev := &b
+			b := make([]byte, 0, 16) {{/*- TODO: better "guess" for cap. */}}
 			msg := msg.{{ .Name }}
 			{{ template "encoder" .Record }}
 			switch {
 			case len(b) <= maxVarint1:
-				b[1] = byte(len(b))
-				bprev = append(bprev, b[1:]...)
+				*bprev = growBytes(*bprev, len(b) + 1)
+				*bprev = append(*bprev, byte(len(b)))
+				*bprev = append(*bprev, b...)
 			case len(b) <= maxVarint2:
-				b[0] = byte(len(b) | 0x80)
-				b[1] = byte(len(b) >> 7)
-				bprev = append(bprev, b...)
+				*bprev = growBytes(*bprev, len(b) + 2)
+				*bprev = append(*bprev,
+					byte(len(b) | 0x80),
+					byte(len(b) >> 7))
+				*bprev = append(*bprev, b...)
 			default:
-				bprev = growBytes(bprev, 10 + len(b))
-				uvlen := putUvarint(bprev[len(bprev):len(bprev)+10], uint64(len(b)))
-				bprev = bprev[:len(bprev)+uvlen]
-				bprev = append(bprev, b[2:]...)
+				*bprev = growBytes(*bprev, len(b) + 10)
+				uvlen := putUvarint((*bprev)[len(*bprev):len(*bprev)+10], uint64(len(b)))
+				*bprev = (*bprev)[:len(*bprev)+uvlen]
+				*bprev = append(*bprev, b[2:]...)
 			}
 		}
 	{{- else if eq .Record.Kind "scalar" }}
@@ -89,14 +92,14 @@ struct {
 			{{ if not (.Has "write_empty") }}if msg.{{ .Name }} != 0 { {{ end }}
 			// field number {{ .BinFieldNum }}
 			b = append(b, {{ range .Tag }}{{ . }}, {{ end }})
-			b = grow(b, 10)
+			b = growBytes(b, 10)
 			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.{{ .Name }}))]
 			{{ if not (.Has "write_empty") }} } {{ end }}
 		{{ else }}
 			{{ if not (.Has "write_empty") }}if msg.{{ .Name }} != 0 { {{ end }}
 			// field number {{ .BinFieldNum }}
 			b = append(b, {{ range .Tag }}{{ . }}, {{ end }})
-			b = grow(b, 10)
+			b = growBytes(b, 10)
 			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.{{ .Name }}))]
 			{{ if not (.Has "write_empty") }} } {{ end }}
 		{{ end }}

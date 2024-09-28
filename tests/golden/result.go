@@ -183,12 +183,12 @@ func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 // github.com/thehowl/tomino/tests/golden.TestType
 type TestTypeMessage struct {
 	Time struct {
-	Seconds int64 `json:"seconds"`
-	Nanoseconds int32 `json:"nanoseconds"`
+	Seconds uint64 `json:"seconds"`
+	Nanoseconds uint32 `json:"nanoseconds"`
 } `json:"Time"`
 	Duration struct {
-	Seconds int64 `json:"seconds"`
-	Nanoseconds int32 `json:"nanoseconds"`
+	Seconds uint64 `json:"seconds"`
+	Nanoseconds uint32 `json:"nanoseconds"`
 } `json:"Duration"`
 }
 
@@ -201,77 +201,83 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 		// field number 1
 		b = append(b, 10, )
 		{
-			bprev := b
-			b := make([]byte, 2, 16) 
+			bprev := &b
+			b := make([]byte, 0, 16) 
 			msg := msg.Time
 			
 		
 			if msg.Seconds != 0 { 
 			// field number 1
 			b = append(b, 8, )
-			b = grow(b, 10)
-			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Seconds))]
+			b = growBytes(b, 10)
+			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Seconds))]
 			 } 
 		
 		
 			if msg.Nanoseconds != 0 { 
 			// field number 2
 			b = append(b, 16, )
-			b = grow(b, 10)
-			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Nanoseconds))]
+			b = growBytes(b, 10)
+			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Nanoseconds))]
 			 } 
 		
 			switch {
 			case len(b) <= maxVarint1:
-				b[1] = byte(len(b))
-				bprev = append(bprev, b[1:]...)
+				*bprev = growBytes(*bprev, len(b) + 1)
+				*bprev = append(*bprev, byte(len(b)))
+				*bprev = append(*bprev, b...)
 			case len(b) <= maxVarint2:
-				b[0] = byte(len(b) | 0x80)
-				b[1] = byte(len(b) >> 7)
-				bprev = append(bprev, b...)
+				*bprev = growBytes(*bprev, len(b) + 2)
+				*bprev = append(*bprev,
+					byte(len(b) | 0x80),
+					byte(len(b) >> 7))
+				*bprev = append(*bprev, b...)
 			default:
-				bprev = growBytes(bprev, 10 + len(b))
-				uvlen := putUvarint(bprev[len(bprev):len(bprev)+10], uint64(len(b)))
-				bprev = bprev[:len(bprev)+uvlen]
-				bprev = append(bprev, b[2:]...)
+				*bprev = growBytes(*bprev, len(b) + 10)
+				uvlen := putUvarint((*bprev)[len(*bprev):len(*bprev)+10], uint64(len(b)))
+				*bprev = (*bprev)[:len(*bprev)+uvlen]
+				*bprev = append(*bprev, b[2:]...)
 			}
 		}
 		// field number 2
 		b = append(b, 18, )
 		{
-			bprev := b
-			b := make([]byte, 2, 16) 
+			bprev := &b
+			b := make([]byte, 0, 16) 
 			msg := msg.Duration
 			
 		
 			if msg.Seconds != 0 { 
 			// field number 1
 			b = append(b, 8, )
-			b = grow(b, 10)
-			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Seconds))]
+			b = growBytes(b, 10)
+			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Seconds))]
 			 } 
 		
 		
 			if msg.Nanoseconds != 0 { 
 			// field number 2
 			b = append(b, 16, )
-			b = grow(b, 10)
-			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Nanoseconds))]
+			b = growBytes(b, 10)
+			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Nanoseconds))]
 			 } 
 		
 			switch {
 			case len(b) <= maxVarint1:
-				b[1] = byte(len(b))
-				bprev = append(bprev, b[1:]...)
+				*bprev = growBytes(*bprev, len(b) + 1)
+				*bprev = append(*bprev, byte(len(b)))
+				*bprev = append(*bprev, b...)
 			case len(b) <= maxVarint2:
-				b[0] = byte(len(b) | 0x80)
-				b[1] = byte(len(b) >> 7)
-				bprev = append(bprev, b...)
+				*bprev = growBytes(*bprev, len(b) + 2)
+				*bprev = append(*bprev,
+					byte(len(b) | 0x80),
+					byte(len(b) >> 7))
+				*bprev = append(*bprev, b...)
 			default:
-				bprev = growBytes(bprev, 10 + len(b))
-				uvlen := putUvarint(bprev[len(bprev):len(bprev)+10], uint64(len(b)))
-				bprev = bprev[:len(bprev)+uvlen]
-				bprev = append(bprev, b[2:]...)
+				*bprev = growBytes(*bprev, len(b) + 10)
+				uvlen := putUvarint((*bprev)[len(*bprev):len(*bprev)+10], uint64(len(b)))
+				*bprev = (*bprev)[:len(*bprev)+uvlen]
+				*bprev = append(*bprev, b[2:]...)
 			}
 		}
 	return b, nil

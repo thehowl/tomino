@@ -86,13 +86,13 @@ func parse(tp types.Type) (ir.Record, error) {
 			timeFields := []ir.StructField{
 				{
 					Name:        "Seconds",
-					Record:      ir.ScalarRecord{Name: "int64"},
+					Record:      ir.ScalarRecord{Name: "uint64"},
 					JSONName:    "seconds",
 					BinFieldNum: 1,
 				},
 				{
 					Name:        "Nanoseconds",
-					Record:      ir.ScalarRecord{Name: "int32"},
+					Record:      ir.ScalarRecord{Name: "uint32"},
 					JSONName:    "nanoseconds",
 					BinFieldNum: 2,
 				},
@@ -100,6 +100,8 @@ func parse(tp types.Type) (ir.Record, error) {
 			// Encode Time and Duration differently than we would do otherwise.
 			// The Go converter will handle the details of converting from the orig
 			// type.
+			// Seconds and Nanoseconds are encoded as uints to encode them using
+			// Uvarint; but they are signed.
 			switch tp.Obj().Name() {
 			case "Duration":
 				return ir.StructRecord{
