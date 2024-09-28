@@ -7,180 +7,274 @@ import "unsafe"
 // URLMessage is the tomino message for the type
 // net/url.URL
 type URLMessage struct {
-    Scheme string `json:"Scheme"`
-    Opaque string `json:"Opaque"`
-    User *struct {
+	Scheme string `json:"Scheme"`
+	Opaque string `json:"Opaque"`
+	User *struct {
 } `json:"User"`
-    Host string `json:"Host"`
-    Path string `json:"Path"`
-    RawPath string `json:"RawPath"`
-    OmitHost bool `json:"OmitHost"`
-    ForceQuery bool `json:"ForceQuery"`
-    RawQuery string `json:"RawQuery"`
-    Fragment string `json:"Fragment"`
-    RawFragment string `json:"RawFragment"`
+	Host string `json:"Host"`
+	Path string `json:"Path"`
+	RawPath string `json:"RawPath"`
+	OmitHost bool `json:"OmitHost"`
+	ForceQuery bool `json:"ForceQuery"`
+	RawQuery string `json:"RawQuery"`
+	Fragment string `json:"Fragment"`
+	RawFragment string `json:"RawFragment"`
 }
 
 func (msg URLMessage) MarshalBinary() ([]byte, error) {
-    return msg.AppendBinary(nil)
+	return msg.AppendBinary(nil)
 }
 
 func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
-    
-    // field number 1
-    b = append(b, 10, )
-        if len(msg.Scheme) > 0 { 
-        switch {
-        case len(msg.Scheme) <= maxVarint1:
-            b = append(b, byte(len(msg.Scheme)))
-            b = append(b, msg.Scheme...)
-        case len(msg.Scheme) <= maxVarint2:
-            b = append(b, byte(len(msg.Scheme) | 0x80), byte(len(msg.Scheme) >> 7))
-            b = append(b, msg.Scheme...)
-        default:
-            b = growBytes(b, 10 + len(msg.Scheme))
-            uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Scheme)))
-            b = b[:len(b)+uvlen]
-            b = append(b, msg.Scheme...)
-        }
-         } 
-    // field number 2
-    b = append(b, 18, )
-        if len(msg.Opaque) > 0 { 
-        switch {
-        case len(msg.Opaque) <= maxVarint1:
-            b = append(b, byte(len(msg.Opaque)))
-            b = append(b, msg.Opaque...)
-        case len(msg.Opaque) <= maxVarint2:
-            b = append(b, byte(len(msg.Opaque) | 0x80), byte(len(msg.Opaque) >> 7))
-            b = append(b, msg.Opaque...)
-        default:
-            b = growBytes(b, 10 + len(msg.Opaque))
-            uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Opaque)))
-            b = b[:len(b)+uvlen]
-            b = append(b, msg.Opaque...)
-        }
-         } 
-    // field number 3
-    b = append(b, 26, )
-        // msg.User - Not implemented
-    // field number 4
-    b = append(b, 34, )
-        if len(msg.Host) > 0 { 
-        switch {
-        case len(msg.Host) <= maxVarint1:
-            b = append(b, byte(len(msg.Host)))
-            b = append(b, msg.Host...)
-        case len(msg.Host) <= maxVarint2:
-            b = append(b, byte(len(msg.Host) | 0x80), byte(len(msg.Host) >> 7))
-            b = append(b, msg.Host...)
-        default:
-            b = growBytes(b, 10 + len(msg.Host))
-            uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Host)))
-            b = b[:len(b)+uvlen]
-            b = append(b, msg.Host...)
-        }
-         } 
-    // field number 5
-    b = append(b, 42, )
-        if len(msg.Path) > 0 { 
-        switch {
-        case len(msg.Path) <= maxVarint1:
-            b = append(b, byte(len(msg.Path)))
-            b = append(b, msg.Path...)
-        case len(msg.Path) <= maxVarint2:
-            b = append(b, byte(len(msg.Path) | 0x80), byte(len(msg.Path) >> 7))
-            b = append(b, msg.Path...)
-        default:
-            b = growBytes(b, 10 + len(msg.Path))
-            uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Path)))
-            b = b[:len(b)+uvlen]
-            b = append(b, msg.Path...)
-        }
-         } 
-    // field number 6
-    b = append(b, 50, )
-        if len(msg.RawPath) > 0 { 
-        switch {
-        case len(msg.RawPath) <= maxVarint1:
-            b = append(b, byte(len(msg.RawPath)))
-            b = append(b, msg.RawPath...)
-        case len(msg.RawPath) <= maxVarint2:
-            b = append(b, byte(len(msg.RawPath) | 0x80), byte(len(msg.RawPath) >> 7))
-            b = append(b, msg.RawPath...)
-        default:
-            b = growBytes(b, 10 + len(msg.RawPath))
-            uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.RawPath)))
-            b = b[:len(b)+uvlen]
-            b = append(b, msg.RawPath...)
-        }
-         } 
-    // field number 7
-    b = append(b, 56, )
-         
-            if msg.OmitHost {
-                b = append(b, 1)
-            }
-        
-    // field number 8
-    b = append(b, 64, )
-         
-            if msg.ForceQuery {
-                b = append(b, 1)
-            }
-        
-    // field number 9
-    b = append(b, 74, )
-        if len(msg.RawQuery) > 0 { 
-        switch {
-        case len(msg.RawQuery) <= maxVarint1:
-            b = append(b, byte(len(msg.RawQuery)))
-            b = append(b, msg.RawQuery...)
-        case len(msg.RawQuery) <= maxVarint2:
-            b = append(b, byte(len(msg.RawQuery) | 0x80), byte(len(msg.RawQuery) >> 7))
-            b = append(b, msg.RawQuery...)
-        default:
-            b = growBytes(b, 10 + len(msg.RawQuery))
-            uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.RawQuery)))
-            b = b[:len(b)+uvlen]
-            b = append(b, msg.RawQuery...)
-        }
-         } 
-    // field number 10
-    b = append(b, 82, )
-        if len(msg.Fragment) > 0 { 
-        switch {
-        case len(msg.Fragment) <= maxVarint1:
-            b = append(b, byte(len(msg.Fragment)))
-            b = append(b, msg.Fragment...)
-        case len(msg.Fragment) <= maxVarint2:
-            b = append(b, byte(len(msg.Fragment) | 0x80), byte(len(msg.Fragment) >> 7))
-            b = append(b, msg.Fragment...)
-        default:
-            b = growBytes(b, 10 + len(msg.Fragment))
-            uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Fragment)))
-            b = b[:len(b)+uvlen]
-            b = append(b, msg.Fragment...)
-        }
-         } 
-    // field number 11
-    b = append(b, 90, )
-        if len(msg.RawFragment) > 0 { 
-        switch {
-        case len(msg.RawFragment) <= maxVarint1:
-            b = append(b, byte(len(msg.RawFragment)))
-            b = append(b, msg.RawFragment...)
-        case len(msg.RawFragment) <= maxVarint2:
-            b = append(b, byte(len(msg.RawFragment) | 0x80), byte(len(msg.RawFragment) >> 7))
-            b = append(b, msg.RawFragment...)
-        default:
-            b = growBytes(b, 10 + len(msg.RawFragment))
-            uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.RawFragment)))
-            b = b[:len(b)+uvlen]
-            b = append(b, msg.RawFragment...)
-        }
-         } 
-    return b, nil
+	
+		if len(msg.Scheme) > 0 { 
+		// field number 1
+		b = append(b, 10, )
+		switch {
+		case len(msg.Scheme) <= maxVarint1:
+			b = append(b, byte(len(msg.Scheme)))
+			b = append(b, msg.Scheme...)
+		case len(msg.Scheme) <= maxVarint2:
+			b = append(b, byte(len(msg.Scheme) | 0x80), byte(len(msg.Scheme) >> 7))
+			b = append(b, msg.Scheme...)
+		default:
+			b = growBytes(b, 10 + len(msg.Scheme))
+			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Scheme)))
+			b = b[:len(b)+uvlen]
+			b = append(b, msg.Scheme...)
+		}
+		 } 
+		if len(msg.Opaque) > 0 { 
+		// field number 2
+		b = append(b, 18, )
+		switch {
+		case len(msg.Opaque) <= maxVarint1:
+			b = append(b, byte(len(msg.Opaque)))
+			b = append(b, msg.Opaque...)
+		case len(msg.Opaque) <= maxVarint2:
+			b = append(b, byte(len(msg.Opaque) | 0x80), byte(len(msg.Opaque) >> 7))
+			b = append(b, msg.Opaque...)
+		default:
+			b = growBytes(b, 10 + len(msg.Opaque))
+			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Opaque)))
+			b = b[:len(b)+uvlen]
+			b = append(b, msg.Opaque...)
+		}
+		 } 
+		// msg.User - Not implemented
+		if len(msg.Host) > 0 { 
+		// field number 4
+		b = append(b, 34, )
+		switch {
+		case len(msg.Host) <= maxVarint1:
+			b = append(b, byte(len(msg.Host)))
+			b = append(b, msg.Host...)
+		case len(msg.Host) <= maxVarint2:
+			b = append(b, byte(len(msg.Host) | 0x80), byte(len(msg.Host) >> 7))
+			b = append(b, msg.Host...)
+		default:
+			b = growBytes(b, 10 + len(msg.Host))
+			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Host)))
+			b = b[:len(b)+uvlen]
+			b = append(b, msg.Host...)
+		}
+		 } 
+		if len(msg.Path) > 0 { 
+		// field number 5
+		b = append(b, 42, )
+		switch {
+		case len(msg.Path) <= maxVarint1:
+			b = append(b, byte(len(msg.Path)))
+			b = append(b, msg.Path...)
+		case len(msg.Path) <= maxVarint2:
+			b = append(b, byte(len(msg.Path) | 0x80), byte(len(msg.Path) >> 7))
+			b = append(b, msg.Path...)
+		default:
+			b = growBytes(b, 10 + len(msg.Path))
+			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Path)))
+			b = b[:len(b)+uvlen]
+			b = append(b, msg.Path...)
+		}
+		 } 
+		if len(msg.RawPath) > 0 { 
+		// field number 6
+		b = append(b, 50, )
+		switch {
+		case len(msg.RawPath) <= maxVarint1:
+			b = append(b, byte(len(msg.RawPath)))
+			b = append(b, msg.RawPath...)
+		case len(msg.RawPath) <= maxVarint2:
+			b = append(b, byte(len(msg.RawPath) | 0x80), byte(len(msg.RawPath) >> 7))
+			b = append(b, msg.RawPath...)
+		default:
+			b = growBytes(b, 10 + len(msg.RawPath))
+			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.RawPath)))
+			b = b[:len(b)+uvlen]
+			b = append(b, msg.RawPath...)
+		}
+		 } 
+		 
+			if msg.OmitHost {
+				// field number 7
+				b = append(b, 56,  1)
+			}
+		
+		 
+			if msg.ForceQuery {
+				// field number 8
+				b = append(b, 64,  1)
+			}
+		
+		if len(msg.RawQuery) > 0 { 
+		// field number 9
+		b = append(b, 74, )
+		switch {
+		case len(msg.RawQuery) <= maxVarint1:
+			b = append(b, byte(len(msg.RawQuery)))
+			b = append(b, msg.RawQuery...)
+		case len(msg.RawQuery) <= maxVarint2:
+			b = append(b, byte(len(msg.RawQuery) | 0x80), byte(len(msg.RawQuery) >> 7))
+			b = append(b, msg.RawQuery...)
+		default:
+			b = growBytes(b, 10 + len(msg.RawQuery))
+			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.RawQuery)))
+			b = b[:len(b)+uvlen]
+			b = append(b, msg.RawQuery...)
+		}
+		 } 
+		if len(msg.Fragment) > 0 { 
+		// field number 10
+		b = append(b, 82, )
+		switch {
+		case len(msg.Fragment) <= maxVarint1:
+			b = append(b, byte(len(msg.Fragment)))
+			b = append(b, msg.Fragment...)
+		case len(msg.Fragment) <= maxVarint2:
+			b = append(b, byte(len(msg.Fragment) | 0x80), byte(len(msg.Fragment) >> 7))
+			b = append(b, msg.Fragment...)
+		default:
+			b = growBytes(b, 10 + len(msg.Fragment))
+			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Fragment)))
+			b = b[:len(b)+uvlen]
+			b = append(b, msg.Fragment...)
+		}
+		 } 
+		if len(msg.RawFragment) > 0 { 
+		// field number 11
+		b = append(b, 90, )
+		switch {
+		case len(msg.RawFragment) <= maxVarint1:
+			b = append(b, byte(len(msg.RawFragment)))
+			b = append(b, msg.RawFragment...)
+		case len(msg.RawFragment) <= maxVarint2:
+			b = append(b, byte(len(msg.RawFragment) | 0x80), byte(len(msg.RawFragment) >> 7))
+			b = append(b, msg.RawFragment...)
+		default:
+			b = growBytes(b, 10 + len(msg.RawFragment))
+			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.RawFragment)))
+			b = b[:len(b)+uvlen]
+			b = append(b, msg.RawFragment...)
+		}
+		 } 
+	return b, nil
+}
+
+// TestTypeMessage is the tomino message for the type
+// tomino-test/golden.TestType
+type TestTypeMessage struct {
+	Time struct {
+	Seconds int64 `json:"seconds"`
+	Nanoseconds int32 `json:"nanoseconds"`
+} `json:"Time"`
+	Duration struct {
+	Seconds int64 `json:"seconds"`
+	Nanoseconds int32 `json:"nanoseconds"`
+} `json:"Duration"`
+}
+
+func (msg TestTypeMessage) MarshalBinary() ([]byte, error) {
+	return msg.AppendBinary(nil)
+}
+
+func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
+	
+		// field number 1
+		b = append(b, 10, )
+		{
+			bprev := b
+			b := make([]byte, 2, 16) 
+			msg := msg.Time
+			
+		
+			if msg.Seconds != 0 { 
+			// field number 1
+			b = append(b, 8, )
+			b = grow(b, 10)
+			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Seconds)]
+			 } 
+		
+		
+			if msg.Nanoseconds != 0 { 
+			// field number 2
+			b = append(b, 16, )
+			b = grow(b, 10)
+			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Nanoseconds)]
+			 } 
+		
+			switch {
+			case len(b) <= maxVarint1:
+				b[1] = byte(len(b))
+				bprev = append(bprev, b[1:]...)
+			case len(b) <= maxVarint2:
+				b[0] = byte(len(b) | 0x80)
+				b[1] = byte(len(b) >> 7)
+				bprev = append(bprev, b...)
+			default:
+				bprev = growBytes(bprev, 10 + len(b))
+				uvlen := putUvarint(bprev[len(bprev):len(bprev)+10], uint64(len(b)))
+				bprev = bprev[:len(bprev)+uvlen]
+				bprev = append(bprev, b[2:]...)
+			}
+		}
+		// field number 2
+		b = append(b, 18, )
+		{
+			bprev := b
+			b := make([]byte, 2, 16) 
+			msg := msg.Duration
+			
+		
+			if msg.Seconds != 0 { 
+			// field number 1
+			b = append(b, 8, )
+			b = grow(b, 10)
+			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Seconds)]
+			 } 
+		
+		
+			if msg.Nanoseconds != 0 { 
+			// field number 2
+			b = append(b, 16, )
+			b = grow(b, 10)
+			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Nanoseconds)]
+			 } 
+		
+			switch {
+			case len(b) <= maxVarint1:
+				b[1] = byte(len(b))
+				bprev = append(bprev, b[1:]...)
+			case len(b) <= maxVarint2:
+				b[0] = byte(len(b) | 0x80)
+				b[1] = byte(len(b) >> 7)
+				bprev = append(bprev, b...)
+			default:
+				bprev = growBytes(bprev, 10 + len(b))
+				uvlen := putUvarint(bprev[len(bprev):len(bprev)+10], uint64(len(b)))
+				bprev = bprev[:len(bprev)+uvlen]
+				bprev = append(bprev, b[2:]...)
+			}
+		}
+	return b, nil
 }
 
 
@@ -189,10 +283,10 @@ func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 // encoding helpers
 
 const (
-    // These are common when encoding lengths, and have fast paths instead of
-    // calling putUvarint.
-    maxVarint1 = (1 << 7) - 1
-    maxVarint2 = (1 << 7) - 1
+	// These are common when encoding lengths, and have fast paths instead of
+	// calling putUvarint.
+	maxVarint1 = (1 << 7) - 1
+	maxVarint2 = (1 << 7) - 1
 )
 
 // Non-generic version of slices.Grow.

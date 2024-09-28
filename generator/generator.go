@@ -82,6 +82,40 @@ func parse(tp types.Type) (ir.Record, error) {
 	case *types.Slice:
 		panic("not implemented")
 	case *types.Named:
+		if obj := tp.Obj(); obj.Pkg().Path() == "time" {
+			timeFields := []ir.StructField{
+				{
+					Name:        "Seconds",
+					Record:      ir.ScalarRecord{Name: "int64"},
+					JSONName:    "seconds",
+					BinFieldNum: 1,
+				},
+				{
+					Name:        "Nanoseconds",
+					Record:      ir.ScalarRecord{Name: "int32"},
+					JSONName:    "nanoseconds",
+					BinFieldNum: 2,
+				},
+			}
+			// Encode Time and Duration differently than we would do otherwise.
+			// The Go converter will handle the details of converting from the orig
+			// type.
+			switch tp.Obj().Name() {
+			case "Duration":
+				return ir.StructRecord{
+					Name:   "Duration",
+					Source: "time.Duration",
+					Fields: timeFields,
+				}, nil
+			case "Time":
+				return ir.StructRecord{
+					Name:   "Time",
+					Source: "time.Time",
+					Fields: timeFields,
+				}, nil
+			}
+		}
+
 		// TODO: should centralize names in a registry so we re-use encoders.
 		// TODO: should understand a type having AminoMarshal / AminoUnmarshal.
 		parsed, err := parse(tp.Underlying())
