@@ -90,14 +90,14 @@ struct {
 			// field number {{ .BinFieldNum }}
 			b = append(b, {{ range .Tag }}{{ . }}, {{ end }})
 			b = grow(b, 10)
-			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.{{ .Name }})]
+			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.{{ .Name }}))]
 			{{ if not (.Has "write_empty") }} } {{ end }}
 		{{ else }}
 			{{ if not (.Has "write_empty") }}if msg.{{ .Name }} != 0 { {{ end }}
 			// field number {{ .BinFieldNum }}
 			b = append(b, {{ range .Tag }}{{ . }}, {{ end }})
 			b = grow(b, 10)
-			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.{{ .Name }})]
+			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.{{ .Name }}))]
 			{{ if not (.Has "write_empty") }} } {{ end }}
 		{{ end }}
 	{{- else if eq .Record.Kind "optional" }}

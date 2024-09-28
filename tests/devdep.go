@@ -1,6 +1,6 @@
 //go:build gomoddep
 
-package main
+package tests
 
 import (
 	_ "github.com/thehowl/tomino/cmd/tomgen"

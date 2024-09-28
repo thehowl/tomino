@@ -8,9 +8,9 @@ fi
 
 go run github.com/thehowl/tomino/cmd/tomgen \
     net/url.URL \
-    tomino-test/golden.TestType > result.go.1 || exit 1
+    github.com/thehowl/tomino/tests/golden.TestType > result.go.1 || exit 1
 
-diff --color -bsu result.go.1 result.go
+diff --color -bsu result.go result.go.1
 sc="$?"
 if [ "$sc" != "0" ]; then
     exit $sc

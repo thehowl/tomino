@@ -180,7 +180,7 @@ func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 }
 
 // TestTypeMessage is the tomino message for the type
-// tomino-test/golden.TestType
+// github.com/thehowl/tomino/tests/golden.TestType
 type TestTypeMessage struct {
 	Time struct {
 	Seconds int64 `json:"seconds"`
@@ -210,7 +210,7 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 			// field number 1
 			b = append(b, 8, )
 			b = grow(b, 10)
-			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Seconds)]
+			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Seconds))]
 			 } 
 		
 		
@@ -218,7 +218,7 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 			// field number 2
 			b = append(b, 16, )
 			b = grow(b, 10)
-			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Nanoseconds)]
+			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Nanoseconds))]
 			 } 
 		
 			switch {
@@ -248,7 +248,7 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 			// field number 1
 			b = append(b, 8, )
 			b = grow(b, 10)
-			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Seconds)]
+			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Seconds))]
 			 } 
 		
 		
@@ -256,7 +256,7 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 			// field number 2
 			b = append(b, 16, )
 			b = grow(b, 10)
-			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Nanoseconds)]
+			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.Nanoseconds))]
 			 } 
 		
 			switch {

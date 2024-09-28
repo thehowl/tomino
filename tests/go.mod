@@ -1,4 +1,4 @@
-module tomino-test
+module github.com/thehowl/tomino/tests
 
 go 1.22.2
 
