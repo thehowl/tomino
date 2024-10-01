@@ -197,7 +197,7 @@ func (p *StructField) ParseTag(tag reflect.StructTag) (skip bool) {
 	}
 
 	// Parse binary tags.
-	// NOTE: these get validated later, we don't have TypeInfo yet.
+	// NOTE: these get validated in Validate().
 	if binTag == "fixed64" {
 		p.TagFlag |= BinFixed64
 	} else if binTag == "fixed32" {
@@ -218,6 +218,24 @@ func (p *StructField) ParseTag(tag reflect.StructTag) (skip bool) {
 	}
 
 	return
+}
+
+func (p StructField) Validate() error {
+	switch {
+	case p.TagFlag&BinFixed32 != 0 &&
+		p.Record != ScalarRecord{"int32"} &&
+		p.Record != ScalarRecord{"uint32"}:
+		return errors.New("tag fixed32 may only be used on uint32 or int32")
+	case p.TagFlag&BinFixed64 != 0 &&
+		p.Record != ScalarRecord{"int64"} &&
+		p.Record != ScalarRecord{"uint64"}:
+		return errors.New("tag fixed64 may only be used on uint64 or int64")
+	case p.TagFlag&Unsafe == 0 &&
+		(p.Record == ScalarRecord{"float64"} ||
+			p.Record == ScalarRecord{"float32"}):
+		return errors.New("floating points must be used with the `amino:\"unsafe\"` struct tag")
+	}
+	return nil
 }
 
 func (p StructField) String() string {
@@ -248,6 +266,11 @@ func (p StructField) Tag() []byte {
 
 	var buf [10]byte
 	return buf[:binary.PutUvarint(buf[:], x)]
+}
+
+func (p StructField) WithRecord(rec Record) StructField {
+	p.Record = rec
+	return p
 }
 
 func (p ScalarRecord) IsUnsigned() bool {

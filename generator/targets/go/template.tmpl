@@ -3,7 +3,7 @@ Go generator.
 Go templates are a bit of a mess, but preferable to writing this by hand.
 Reference: https://pkg.go.dev/text/template
 Additional functions:
-	throw (format string) (args ...any)
+	throw (format string, args ...any)
 		Create an error to stop execution of the template.
 */}}
 
@@ -34,32 +34,47 @@ struct {
 {{- if ne .Kind "struct" -}}{{ throw "cannot encode type %s" .Kind }}{{- end -}}
 {{/*- TODO: pre-calculate minium sizes for encoding the struct, and grow b accordingly. -*/}}
 {{- range .Fields }}
+	{{- template "encoder_field" . -}}
+{{ end }}
+{{ end }}
+
+{{ define "encoder_field" }}
 	{{- if eq .Record.Kind "struct" }}
 		// field number {{ .BinFieldNum }}
-		b = append(b, {{ range .Tag }}{{ . }}, {{ end }})
-		{
-			bprev := &b
-			b := make([]byte, 0, 16) {{/*- TODO: better "guess" for cap. */}}
-			msg := msg.{{ .Name }}
-			{{ template "encoder" .Record }}
-			switch {
-			case len(b) <= maxVarint1:
-				*bprev = growBytes(*bprev, len(b) + 1)
-				*bprev = append(*bprev, byte(len(b)))
-				*bprev = append(*bprev, b...)
-			case len(b) <= maxVarint2:
-				*bprev = growBytes(*bprev, len(b) + 2)
-				*bprev = append(*bprev,
-					byte(len(b) | 0x80),
-					byte(len(b) >> 7))
-				*bprev = append(*bprev, b...)
-			default:
-				*bprev = growBytes(*bprev, len(b) + 10)
-				uvlen := putUvarint((*bprev)[len(*bprev):len(*bprev)+10], uint64(len(b)))
-				*bprev = (*bprev)[:len(*bprev)+uvlen]
-				*bprev = append(*bprev, b[2:]...)
+		{{ if eq 0 (len .Record.Fields) }}
+			// (no fields, just encode 0-length)
+			b = append(b, {{ range .Tag }}{{ . }}, {{ end }} 0)
+		{{ else }}
+			{
+				bprev := &b
+				b := make([]byte, 0, 16) {{/*- TODO: better "guess" for cap. */}}
+				msg := msg.{{ .Name }}
+				{{ template "encoder" .Record }}
+				switch {
+				{{ if not (.Has "write_empty") }}
+				case len(b) == 0:
+					// empty -- append nothing
+				{{ end }}
+				case len(b) <= maxVarint1:
+					*bprev = growBytes(*bprev, {{ len .Tag }} + 1 + len(b))
+					*bprev = append(*bprev, {{ range .Tag }}{{ . }}, {{ end }}byte(len(b)))
+					*bprev = append(*bprev, b...)
+				case len(b) <= maxVarint2:
+					*bprev = growBytes(*bprev, {{ len .Tag }} + 2 + len(b))
+					*bprev = append(*bprev,
+						{{ range .Tag }}{{ . }}, {{ end }}
+						byte(len(b) | 0x80),
+						byte(len(b) >> 7))
+					*bprev = append(*bprev, b...)
+				default:
+					*bprev = growBytes(*bprev, {{ len .Tag }} + 10 + len(b))
+					*bprev = append(*bprev, {{ range .Tag }}{{ . }}, {{ end }})
+					uvlen := putUvarint((*bprev)[len(*bprev):len(*bprev)+10], uint64(len(b)))
+					*bprev = (*bprev)[:len(*bprev)+uvlen]
+					*bprev = append(*bprev, b[2:]...)
+				}
 			}
-		}
+		{{ end }}
 	{{- else if eq .Record.Kind "scalar" }}
 		{{ if (or (.Has "fixed64") (eq .Name "float64")) }}
 			{
@@ -68,8 +83,8 @@ struct {
 				// field number {{ .BinFieldNum }}
 				b = append(b, {{ range .Tag }}{{ . }}, {{ end }})
 				b = growBytes(b, 8)[:len(b)+8]
-				putUint64(b[len(b)-8:len(b)])
-				{{ if not .Has "write_empty" }} } {{ end }}
+				putUint64(b[len(b)-8:len(b)], u64)
+				{{ if not (.Has "write_empty") }} } {{ end }}
 			}
 		{{ else if (or (.Has "fixed32") (eq .Name "float32")) }}
 			{
@@ -78,8 +93,8 @@ struct {
 				// field number {{ .BinFieldNum }}
 				b = append(b, {{ range .Tag }}{{ . }}, {{ end }})
 				b = growBytes(b, 4)[:len(b)+4]
-				putUint32(b[len(b)-4:len(b)])
-				{{ if not .Has "write_empty" }} } {{ end }}
+				putUint32(b[len(b)-4:len(b)], u32)
+				{{ if not (.Has "write_empty") }} } {{ end }}
 			}
 		{{ else if eq .Record.Name "bool" }} {{/*- TODO: does using unsafe +direct write make sense here? what's the assembly code? */}}
 			if msg.{{ .Name }} {
@@ -104,7 +119,14 @@ struct {
 			{{ if not (.Has "write_empty") }} } {{ end }}
 		{{ end }}
 	{{- else if eq .Record.Kind "optional" }}
-		// msg.{{ .Name }} - Not implemented
+		if msg.{{ .Name }} != nil {
+			// use a new "msg" so we can encode the underlying field directly.
+			// with _ = msg, avoid "unused" warnings.
+			msg := struct { {{ .Name }} {{ template "type" .Record.Elem }} }{ *msg.{{ .Name }} }
+			_ = msg
+
+			{{ template "encoder_field" (.WithRecord .Record.Elem) }}
+		}
 	{{- else if eq .Record.Kind "bytes" }}
 		{{ $f := printf "msg.%s" .Name -}}
 		{{ if not (.Has "write_empty") }}if len({{ $f }}) > 0 { {{ end }}
@@ -127,8 +149,7 @@ struct {
 	{{- else -}}
 		{{ throw "unknown kind %s" .Kind }}
 	{{- end -}}
-{{ end -}}
-{{ end }}{{/* end "encoder" */}}
+{{ end }}{{/* end "encoder_field" */}}
 
 {{/* Main entrypoint from Go code.
 	Parameter: []StructRecord. */}}
