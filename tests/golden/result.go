@@ -26,8 +26,8 @@ func (msg URLMessage) MarshalBinary() ([]byte, error) {
 }
 
 func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
-	
-		if len(msg.Scheme) > 0 { 
+	 
+		if len(msg.Scheme) > 0 {
 		// field number 1
 		b = append(b, 10, )
 		switch {
@@ -43,8 +43,8 @@ func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.Scheme...)
 		}
-		 } 
-		if len(msg.Opaque) > 0 { 
+		} 
+		if len(msg.Opaque) > 0 {
 		// field number 2
 		b = append(b, 18, )
 		switch {
@@ -60,7 +60,7 @@ func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.Opaque...)
 		}
-		 } 
+		}
 		if msg.User != nil {
 			// use a new "msg" so we can encode the underlying field directly.
 			// with _ = msg, avoid "unused" warnings.
@@ -71,11 +71,12 @@ func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 			
 		// field number 3
 		
-			// (no fields, just encode 0-length)
-			b = append(b, 26,  0)
+			
+				// (no fields, skip as there is no write_empty)
+			
 		
-		}
-		if len(msg.Host) > 0 { 
+		} 
+		if len(msg.Host) > 0 {
 		// field number 4
 		b = append(b, 34, )
 		switch {
@@ -91,8 +92,8 @@ func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.Host...)
 		}
-		 } 
-		if len(msg.Path) > 0 { 
+		} 
+		if len(msg.Path) > 0 {
 		// field number 5
 		b = append(b, 42, )
 		switch {
@@ -108,8 +109,8 @@ func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.Path...)
 		}
-		 } 
-		if len(msg.RawPath) > 0 { 
+		} 
+		if len(msg.RawPath) > 0 {
 		// field number 6
 		b = append(b, 50, )
 		switch {
@@ -125,7 +126,7 @@ func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.RawPath...)
 		}
-		 } 
+		}
 		 
 			if msg.OmitHost {
 				// field number 7
@@ -137,8 +138,8 @@ func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 				// field number 8
 				b = append(b, 64,  1)
 			}
-		
-		if len(msg.RawQuery) > 0 { 
+		 
+		if len(msg.RawQuery) > 0 {
 		// field number 9
 		b = append(b, 74, )
 		switch {
@@ -154,8 +155,8 @@ func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.RawQuery...)
 		}
-		 } 
-		if len(msg.Fragment) > 0 { 
+		} 
+		if len(msg.Fragment) > 0 {
 		// field number 10
 		b = append(b, 82, )
 		switch {
@@ -171,8 +172,8 @@ func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.Fragment...)
 		}
-		 } 
-		if len(msg.RawFragment) > 0 { 
+		} 
+		if len(msg.RawFragment) > 0 {
 		// field number 11
 		b = append(b, 90, )
 		switch {
@@ -188,7 +189,7 @@ func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.RawFragment...)
 		}
-		 } 
+		}
 
 	return b, nil
 }
@@ -205,6 +206,10 @@ type TestTypeMessage struct {
 	Nanoseconds uint32 `json:"nanoseconds"`
 } `json:"Duration"`
 	FixedUint uint64 `json:"FixedUint"`
+	Byte uint8 `json:"Byte"`
+	Bytes []byte `json:"Bytes"`
+	ByteArr [4]byte `json:"ByteArr"`
+	ZeroArr [0]byte `json:"ZeroArr"`
 	IntPtr *int `json:"IntPtr"`
 }
 
@@ -222,20 +227,20 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 				msg := msg.Time
 				
 		
-			if msg.Seconds != 0 { 
+			if msg.Seconds != 0 {
 			// field number 1
 			b = append(b, 8, )
 			b = growBytes(b, 10)
 			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Seconds))]
-			 } 
+			}
 		
 		
-			if msg.Nanoseconds != 0 { 
+			if msg.Nanoseconds != 0 {
 			// field number 2
 			b = append(b, 16, )
 			b = growBytes(b, 10)
 			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Nanoseconds))]
-			 } 
+			}
 		
 
 				switch {
@@ -271,20 +276,20 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 				msg := msg.Duration
 				
 		
-			if msg.Seconds != 0 { 
+			if msg.Seconds != 0 {
 			// field number 1
 			b = append(b, 8, )
 			b = growBytes(b, 10)
 			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Seconds))]
-			 } 
+			}
 		
 		
-			if msg.Nanoseconds != 0 { 
+			if msg.Nanoseconds != 0 {
 			// field number 2
 			b = append(b, 16, )
 			b = growBytes(b, 10)
 			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Nanoseconds))]
-			 } 
+			}
 		
 
 				switch {
@@ -315,13 +320,50 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 		
 			{
 				u64 := *(*uint64)(unsafe.Pointer(&msg.FixedUint)) 
-				if u64 != 0 { 
+				if u64 != 0 {
 				// field number 3
 				b = append(b, 25, )
 				b = growBytes(b, 8)[:len(b)+8]
 				putUint64(b[len(b)-8:len(b)], u64)
 				 } 
 			}
+		
+		
+			if msg.Byte != 0 {
+			// field number 4
+			b = append(b, 32, )
+			b = growBytes(b, 10)
+			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Byte))]
+			}
+		 
+		if len(msg.Bytes) > 0 {
+		// field number 5
+		b = append(b, 42, )
+		switch {
+		case len(msg.Bytes) <= maxVarint1:
+			b = append(b, byte(len(msg.Bytes)))
+			b = append(b, msg.Bytes...)
+		case len(msg.Bytes) <= maxVarint2:
+			b = append(b, byte(len(msg.Bytes) | 0x80), byte(len(msg.Bytes) >> 7))
+			b = append(b, msg.Bytes...)
+		default:
+			b = growBytes(b, 10 + len(msg.Bytes))
+			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Bytes)))
+			b = b[:len(b)+uvlen]
+			b = append(b, msg.Bytes...)
+		}
+		} // field number 6
+		
+			b = append(b,
+				// tag
+				50, 
+				// size
+				4, 
+			)
+			b = append(b, msg.ByteArr[:]...)
+		 // field number 7
+		
+			// Skipped (zero-element array)
 		
 		if msg.IntPtr != nil {
 			// use a new "msg" so we can encode the underlying field directly.
@@ -331,12 +373,12 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 
 			
 		
-			if msg.IntPtr != 0 { 
-			// field number 4
-			b = append(b, 32, )
+			if msg.IntPtr != 0 {
+			// field number 8
+			b = append(b, 64, )
 			b = growBytes(b, 10)
 			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.IntPtr))]
-			 } 
+			}
 		
 		}
 

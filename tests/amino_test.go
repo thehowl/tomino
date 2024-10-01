@@ -28,6 +28,8 @@ func TestMarshalerCompatibility(t *testing.T) {
 			v.Time.Seconds = 900000
 			return v
 		}(),
+		"bytes":     {Bytes: []byte{1, 2, 3, 4}},
+		"bytes_arr": {ByteArr: [4]byte{1, 2, 3, 4}},
 	}
 
 	for _, name := range sortedMapKeys(tm) {

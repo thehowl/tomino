@@ -58,15 +58,25 @@ func parse(tp types.Type) (ir.Record, error) {
 		// TODO: does this understand rune == int32 and byte == uint8?
 		// if not, let's use tp.Kind() instead.
 		sr := ir.ScalarRecord{Name: tp.Name()}
-		switch {
-		case sr.Name == "string":
-			return ir.BytesRecord{String: true}, nil
-		case sr.Validate() == nil:
-			return sr, nil
-		default:
-			return nil, fmt.Errorf("unsupported basic type: %v", tp.Name())
+		switch sr.Name {
+		case "byte":
+			sr.Name = "uint8"
+		case "rune":
+			sr.Name = "int32"
+		case "string":
+			return ir.BytesRecord{String: true, Size: -1}, nil
 		}
+
+		return sr, sr.Validate()
 	case *types.Array:
+		if isUint8(tp.Elem()) {
+			return ir.BytesRecord{Size: tp.Len()}, nil
+		}
+		panic("not implemented")
+	case *types.Slice:
+		if isUint8(tp.Elem()) {
+			return ir.BytesRecord{Size: -1}, nil
+		}
 		panic("not implemented")
 	case *types.Interface:
 		panic("not implemented")
@@ -79,8 +89,6 @@ func parse(tp types.Type) (ir.Record, error) {
 			return nil, err
 		}
 		return ir.OptionalRecord{Elem: v}, nil
-	case *types.Slice:
-		panic("not implemented")
 	case *types.Named:
 		if obj := tp.Obj(); obj.Pkg().Path() == "time" {
 			timeFields := []ir.StructField{
@@ -133,4 +141,11 @@ func parse(tp types.Type) (ir.Record, error) {
 	default:
 		return nil, fmt.Errorf("unsupported type: %T (%v)", tp, tp)
 	}
+}
+
+func isUint8(tp types.Type) bool {
+	if bas, ok := tp.(*types.Basic); ok {
+		return bas.Kind() == types.Byte
+	}
+	return false
 }

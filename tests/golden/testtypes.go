@@ -6,8 +6,11 @@ type TestType struct {
 	Time      time.Time
 	Duration  time.Duration
 	FixedUint uint64 `binary:"fixed64"`
-
-	IntPtr *int
+	Byte      byte
+	Bytes     []byte
+	ByteArr   [4]byte
+	ZeroArr   [0]byte
+	IntPtr    *int
 
 	testName string
 }

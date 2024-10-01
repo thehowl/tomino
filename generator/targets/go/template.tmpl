@@ -5,6 +5,8 @@ Reference: https://pkg.go.dev/text/template
 Additional functions:
 	throw (format string, args ...any)
 		Create an error to stop execution of the template.
+	uvarint (n number)
+		Get the uvarint bytes for n. n can be of any type convertible to uint64.
 */}}
 
 {{/* Used to "stringify" a type.
@@ -21,7 +23,13 @@ struct {
 {{- else if eq .Kind "optional" -}}
 	*{{ template "type" .Elem }}
 {{- else if eq .Kind "bytes" -}}
-	{{ if .String }}string{{ else }}[]byte{{ end }}
+	{{- if .String -}}
+		string
+	{{- else if ne .Size -1 -}}
+		[{{ .Size }}]byte
+	{{- else -}}
+		[]byte
+	{{- end -}}
 {{- else -}}
 	{{ throw "unknown kind %s" .Kind }}
 {{- end -}}
@@ -42,8 +50,12 @@ struct {
 	{{- if eq .Record.Kind "struct" }}
 		// field number {{ .BinFieldNum }}
 		{{ if eq 0 (len .Record.Fields) }}
-			// (no fields, just encode 0-length)
-			b = append(b, {{ range .Tag }}{{ . }}, {{ end }} 0)
+			{{ if .Has "write_empty" }}
+				// (no fields, just encode 0-length)
+				b = append(b, {{ range .Tag }}{{ . }}, {{ end }} 0)
+			{{ else }}
+				// (no fields, skip as there is no write_empty)
+			{{ end }}
 		{{ else }}
 			{
 				bprev := &b
@@ -79,7 +91,7 @@ struct {
 		{{ if (or (.Has "fixed64") (eq .Name "float64")) }}
 			{
 				u64 := *(*uint64)(unsafe.Pointer(&msg.{{ .Name }})) {{/*- same as math.Float64frombits */}}
-				{{ if not (.Has "write_empty") }}if u64 != 0 { {{ end }}
+				{{ if not (.Has "write_empty") }}if u64 != 0 { {{- end }}
 				// field number {{ .BinFieldNum }}
 				b = append(b, {{ range .Tag }}{{ . }}, {{ end }})
 				b = growBytes(b, 8)[:len(b)+8]
@@ -89,7 +101,7 @@ struct {
 		{{ else if (or (.Has "fixed32") (eq .Name "float32")) }}
 			{
 				u32 := *(*uint32)(unsafe.Pointer(&msg.{{ .Name }})) {{/*- same as math.Float32frombits */}}
-				{{ if not (.Has "write_empty") }}if u32 != 0 { {{ end }}
+				{{ if not (.Has "write_empty") }}if u32 != 0 { {{- end }}
 				// field number {{ .BinFieldNum }}
 				b = append(b, {{ range .Tag }}{{ . }}, {{ end }})
 				b = growBytes(b, 4)[:len(b)+4]
@@ -104,19 +116,19 @@ struct {
 				b = append(b, {{ range .Tag }}{{ . }}, {{ end }} 0)
 			}{{ end }}
 		{{ else if .Record.IsUnsigned }}
-			{{ if not (.Has "write_empty") }}if msg.{{ .Name }} != 0 { {{ end }}
+			{{ if not (.Has "write_empty") }}if msg.{{ .Name }} != 0 { {{- end }}
 			// field number {{ .BinFieldNum }}
 			b = append(b, {{ range .Tag }}{{ . }}, {{ end }})
 			b = growBytes(b, 10)
 			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.{{ .Name }}))]
-			{{ if not (.Has "write_empty") }} } {{ end }}
+			{{ if not (.Has "write_empty") -}} } {{- end }}
 		{{ else }}
-			{{ if not (.Has "write_empty") }}if msg.{{ .Name }} != 0 { {{ end }}
+			{{ if not (.Has "write_empty") }}if msg.{{ .Name }} != 0 { {{- end }}
 			// field number {{ .BinFieldNum }}
 			b = append(b, {{ range .Tag }}{{ . }}, {{ end }})
 			b = growBytes(b, 10)
 			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.{{ .Name }}))]
-			{{ if not (.Has "write_empty") }} } {{ end }}
+			{{ if not (.Has "write_empty") -}} } {{- end }}
 		{{ end }}
 	{{- else if eq .Record.Kind "optional" }}
 		if msg.{{ .Name }} != nil {
@@ -127,9 +139,9 @@ struct {
 
 			{{ template "encoder_field" (.WithRecord .Record.Elem) }}
 		}
-	{{- else if eq .Record.Kind "bytes" }}
+	{{- else if and (eq .Record.Kind "bytes") (eq .Record.Size -1) }} {{/*- slices */}}
 		{{ $f := printf "msg.%s" .Name -}}
-		{{ if not (.Has "write_empty") }}if len({{ $f }}) > 0 { {{ end }}
+		{{ if not (.Has "write_empty") }}if len({{ $f }}) > 0 { {{- end }}
 		// field number {{ .BinFieldNum }}
 		b = append(b, {{ range .Tag }}{{ . }}, {{ end }})
 		switch {
@@ -145,9 +157,23 @@ struct {
 			b = b[:len(b)+uvlen]
 			b = append(b, {{ $f }}...)
 		}
-		{{ if not (.Has "write_empty") }} } {{ end }}
+		{{ if not (.Has "write_empty") -}} } {{- end }}
+	{{- else if eq .Record.Kind "bytes" }} {{/*- arrays */}}
+		{{- $f := printf "msg.%s" .Name -}}
+		// field number {{ .BinFieldNum }}
+		{{ if eq .Record.Size 0 }}
+			// Skipped (zero-element array)
+		{{ else }}
+			b = append(b,
+				// tag
+				{{ range .Tag }}{{ . }}, {{ end }}
+				// size
+				{{ range uvarint .Record.Size }}{{ . }}, {{ end }}
+			)
+			b = append(b, {{ $f }}[:]...)
+		{{ end }}
 	{{- else -}}
-		{{ throw "unknown kind %s" .Kind }}
+		{{ throw "unknown kind %s" .Record.Kind }}
 	{{- end -}}
 {{ end }}{{/* end "encoder_field" */}}
 

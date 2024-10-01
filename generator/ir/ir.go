@@ -85,6 +85,10 @@ type (
 	// slices, arrays
 	RepeatedRecord struct {
 		Elem Record
+		// Constrains the size when un/marshalling.
+		// If this size is not respected, decoding can be rejected.
+		// -1 for slices.
+		Size int64
 	}
 
 	// interfaces
@@ -97,8 +101,12 @@ type (
 		Elem Record
 	}
 
-	// []byte, string
+	// []byte, [N]byte, string
 	BytesRecord struct {
+		// Fixed size of the bytes. If size is not
+		// respected when decoding, can be rejected.
+		// -1 for non-arrays.
+		Size int64
 		// A "hint" that this is a string (though nothing should change in marshaling).
 		String bool
 	}
