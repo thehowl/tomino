@@ -193,10 +193,10 @@ struct {
 			b = append(b, {{ $f }}...)
 		}
 	{{- else if eq .Record.Kind "bytes" }} {{/*- arrays */}}
-		{{- $f := printf "msg.%s" .Name -}}
+		{{- $f := printf "msg.%s" .Name }}
 		// field number {{ .BinFieldNum }}
 		{{ if eq .Record.Size 0 }}
-			// Skipped (zero-element array)
+			// skipped (zero-element array)
 		{{ else }}
 			b = append(b,
 				// tag

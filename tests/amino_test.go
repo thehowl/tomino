@@ -40,7 +40,7 @@ func TestMarshalerCompatibility(t *testing.T) {
 		"bytes":           {Bytes: []byte{1, 2, 3, 4}},
 		"bytes_1_000":     {Bytes: randBytes(rnd, 1000)},
 		"bytes_1_000_000": {Bytes: randBytes(rnd, 1_000_000)},
-		"bytes_arr":       {ByteArr: [4]byte{1, 2, 3, 4}},
+		"bytes_arr":       {ByteArr: &[4]byte{1, 2, 3, 4}},
 		"slice": {Slice: []struct {
 			A int `json:"A"`
 			B int `json:"B"`

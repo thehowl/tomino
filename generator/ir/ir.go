@@ -276,15 +276,19 @@ func (p StructField) Tag() []byte {
 		recordTypeI32    = 5
 	)
 
+	if _, ok := p.Record.(OptionalRecord); ok {
+		panic("StructField.Tag on OptionalRecord; you should handle the OptionalRecord then use .WithRecord on the Elem.")
+	}
+
 	// NOTE: here we don't validate whether the type should be a BinFixed64/32.
 	// it's done as part of StructField.Validate.
 	x := uint64(p.BinFieldNum) << 3
-	sr, _ := p.Record.(ScalarRecord)
+	sr, isScalar := p.Record.(ScalarRecord)
 	if p.TagFlag&BinFixed64 != 0 || sr.Name == "float64" {
 		x |= recordTypeI64
 	} else if p.TagFlag&BinFixed32 != 0 || sr.Name == "float32" {
 		x |= recordTypeI32
-	} else if _, ok := p.Record.(ScalarRecord); ok {
+	} else if isScalar {
 		x |= recordTypeVarint
 	} else {
 		x |= recordTypeLen
@@ -321,5 +325,4 @@ func (p ScalarRecord) IsUnsigned() bool {
 - Multidimensional lists (could start off by rejecting them, simply.)
 
 TODO: OptionalRecord
-- Support it in Tag() (should return appropriate tag for underlying OptionalRecord)
 - Support it in StructField.Validate */

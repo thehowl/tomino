@@ -224,7 +224,7 @@ type TestTypeMessage struct {
 	FixedUint uint64 `json:"FixedUint" binary:"fixed64"`
 	Byte uint8 `json:"Byte"`
 	Bytes []byte `json:"Bytes"`
-	ByteArr [4]byte `json:"ByteArr"`
+	ByteArr *[4]byte `json:"ByteArr"`
 	ZeroArr [0]byte `json:"ZeroArr"`
 	IntPtr *int `json:"IntPtr"`
 	Slice []struct {
@@ -374,7 +374,15 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Bytes)))
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.Bytes...)
-		} // field number 6
+		}
+		if msg.ByteArr != nil {
+			// use a new "msg" so we can encode the underlying field directly.
+			// with _ = msg, avoid "unused" warnings.
+			msg := struct { ByteArr [4]byte }{ *msg.ByteArr }
+			_ = msg
+
+			 
+		// field number 6
 		
 			b = append(b,
 				// tag
@@ -383,9 +391,11 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 				4, 
 			)
 			b = append(b, msg.ByteArr[:]...)
-		 // field number 7
 		
-			// Skipped (zero-element array)
+		} 
+		// field number 7
+		
+			// skipped (zero-element array)
 		
 		if msg.IntPtr != nil {
 			// use a new "msg" so we can encode the underlying field directly.

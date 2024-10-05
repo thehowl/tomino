@@ -8,7 +8,7 @@ type TestType struct {
 	FixedUint uint64 `binary:"fixed64"`
 	Byte      byte
 	Bytes     []byte
-	ByteArr   [4]byte
+	ByteArr   *[4]byte
 	ZeroArr   [0]byte
 	IntPtr    *int
 	Slice     []struct{ A, B int }
