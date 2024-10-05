@@ -8,7 +8,9 @@ import (
 	"github.com/thehowl/tomino/generator/ir"
 )
 
-// Parse XXX
+// Parse contructs an ir.StructRecord from the given Go types.Object.
+// The StructRecord can then be used with programming language specific targets
+// to generate encoder/decoder code.
 func Parse(obj types.Object) (ir.StructRecord, error) {
 	tn, ok := obj.(*types.TypeName)
 	if !ok {
@@ -27,6 +29,27 @@ func Parse(obj types.Object) (ir.StructRecord, error) {
 func parse(tp types.Type) (ir.Record, error) {
 	// TODO: change to custom error type.
 	switch tp := tp.(type) {
+	case *types.Basic:
+		sr := ir.ScalarRecord{Name: tp.Name()}
+		switch sr.Name {
+		case "byte":
+			sr.Name = "uint8"
+		case "rune":
+			sr.Name = "int32"
+		case "string":
+			return ir.BytesRecord{String: true, Size: -1}, nil
+		}
+
+		return sr, sr.Validate()
+	case *types.Pointer:
+		if _, isPtr := tp.Elem().Underlying().(*types.Pointer); isPtr {
+			return nil, fmt.Errorf("type %v is pointer of pointer", tp.String())
+		}
+		v, err := parse(tp.Elem())
+		if err != nil {
+			return nil, err
+		}
+		return ir.OptionalRecord{Elem: v}, nil
 	case *types.Struct:
 		flds := make([]ir.StructField, 0, tp.NumFields())
 		for i := 0; i < tp.NumFields(); i++ {
@@ -54,20 +77,6 @@ func parse(tp types.Type) (ir.Record, error) {
 			flds = append(flds, sf)
 		}
 		return ir.StructRecord{Fields: flds}, nil
-	case *types.Basic:
-		// TODO: does this understand rune == int32 and byte == uint8?
-		// if not, let's use tp.Kind() instead.
-		sr := ir.ScalarRecord{Name: tp.Name()}
-		switch sr.Name {
-		case "byte":
-			sr.Name = "uint8"
-		case "rune":
-			sr.Name = "int32"
-		case "string":
-			return ir.BytesRecord{String: true, Size: -1}, nil
-		}
-
-		return sr, sr.Validate()
 	case *types.Array:
 		if isUint8(tp.Elem()) {
 			return ir.BytesRecord{Size: tp.Len()}, nil
@@ -80,50 +89,9 @@ func parse(tp types.Type) (ir.Record, error) {
 		panic("not implemented")
 	case *types.Interface:
 		panic("not implemented")
-	case *types.Pointer:
-		if _, isPtr := tp.Elem().Underlying().(*types.Pointer); isPtr {
-			return nil, fmt.Errorf("type %v is pointer of pointer", tp.String())
-		}
-		v, err := parse(tp.Elem())
-		if err != nil {
-			return nil, err
-		}
-		return ir.OptionalRecord{Elem: v}, nil
 	case *types.Named:
-		if obj := tp.Obj(); obj.Pkg().Path() == "time" {
-			timeFields := []ir.StructField{
-				{
-					Name:        "Seconds",
-					Record:      ir.ScalarRecord{Name: "uint64"},
-					JSONName:    "seconds",
-					BinFieldNum: 1,
-				},
-				{
-					Name:        "Nanoseconds",
-					Record:      ir.ScalarRecord{Name: "uint32"},
-					JSONName:    "nanoseconds",
-					BinFieldNum: 2,
-				},
-			}
-			// Encode Time and Duration differently than we would do otherwise.
-			// The Go converter will handle the details of converting from the orig
-			// type.
-			// Seconds and Nanoseconds are encoded as uints to encode them using
-			// Uvarint; but they are signed.
-			switch tp.Obj().Name() {
-			case "Duration":
-				return ir.StructRecord{
-					Name:   "Duration",
-					Source: "time.Duration",
-					Fields: timeFields,
-				}, nil
-			case "Time":
-				return ir.StructRecord{
-					Name:   "Time",
-					Source: "time.Time",
-					Fields: timeFields,
-				}, nil
-			}
+		if sr, ok := findWellKnown(tp); ok {
+			return sr, nil
 		}
 
 		// TODO: should centralize names in a registry so we re-use encoders.
@@ -143,9 +111,56 @@ func parse(tp types.Type) (ir.Record, error) {
 	}
 }
 
+// isUint8 determines whether the given type is a uint8 or alias (like byte).
 func isUint8(tp types.Type) bool {
 	if bas, ok := tp.(*types.Basic); ok {
 		return bas.Kind() == types.Byte
 	}
 	return false
+}
+
+// findWellKnown handles the case of amino's "well-known" types; ie. the
+// time.Time and time.Duration types. If those are encountered, the underlying
+// StructRecord to be generated (and consequently, the encoding) will be
+// different.
+func findWellKnown(tp *types.Named) (ir.StructRecord, bool) {
+	obj := tp.Obj()
+	if obj.Pkg().Path() != "time" {
+		return ir.StructRecord{}, false
+	}
+	timeFields := []ir.StructField{
+		{
+			Name:        "Seconds",
+			Record:      ir.ScalarRecord{Name: "uint64"},
+			JSONName:    "seconds",
+			BinFieldNum: 1,
+		},
+		{
+			Name:        "Nanoseconds",
+			Record:      ir.ScalarRecord{Name: "uint32"},
+			JSONName:    "nanoseconds",
+			BinFieldNum: 2,
+		},
+	}
+	// Encode Time and Duration differently than we would do otherwise.
+	// The Go converter will handle the details of converting from the orig
+	// type.
+	// Seconds and Nanoseconds are encoded as uints to encode them using
+	// Uvarint; but they are signed.
+	switch tp.Obj().Name() {
+	case "Duration":
+		return ir.StructRecord{
+			Name:   "Duration",
+			Source: "time.Duration",
+			Fields: timeFields,
+		}, true
+	case "Time":
+		return ir.StructRecord{
+			Name:   "Time",
+			Source: "time.Time",
+			Fields: timeFields,
+		}, true
+	default:
+		return ir.StructRecord{}, false
+	}
 }
