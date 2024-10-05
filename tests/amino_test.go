@@ -114,11 +114,18 @@ func BenchmarkMarshalers(b *testing.B) {
 		"fixed": {FixedUint: 0xdeadbeef},
 	}
 
+	buf := make([]byte, 16<<10)
+
 	for _, name := range sortedMapKeys(tm) {
 		v := tm[name]
 		b.Run("tomino_"+name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				_, _ = v.MarshalBinary()
+			}
+		})
+		b.Run("tomino_prealloc_"+name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_, _ = v.AppendBinary(buf[:0])
 			}
 		})
 		b.Run("amino_"+name, func(b *testing.B) {
