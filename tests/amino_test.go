@@ -61,6 +61,12 @@ func TestMarshalerCompatibility(t *testing.T) {
 				t.Log("\n" + hex.Dump(tominoRes))
 			}
 
+			if len(aminoRes) == 0 && len(tominoRes) == 0 {
+				// return here, to avoid any incosistencies like amino returning nil
+				// and tomino returning []byte{}.
+				return
+			}
+
 			assert.Equal(t, aminoRes, tominoRes)
 		})
 	}
