@@ -11,8 +11,12 @@ sc="$?"
 if [ "$sc" != "0" ]; then
     if [ "$1" = "fix" ]; then
         mv result.go.1 result.go
+        printf '//go:build ignore\n\n// This exists to preview the formatted output.\n\n' > result.gofumpt.go
+        go run mvdan.cc/gofumpt result.go >> result.gofumpt.go
     fi
     exit $sc
 else
     rm result.go.1
+    printf '//go:build ignore\n\n// This exists to preview the formatted output.\n\n' > result.gofumpt.go
+    go run mvdan.cc/gofumpt result.go >> result.gofumpt.go
 fi
