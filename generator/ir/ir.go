@@ -63,7 +63,6 @@ type (
 	// float32/64
 	// bool
 	ScalarRecord struct {
-		// TODO: custom type/validation.
 		Name string
 	}
 
@@ -74,10 +73,11 @@ type (
 		Fields []StructField
 	}
 
+	// individual field of the struct
 	StructField struct {
-		Name   string
-		Record Record
-		TagFlag
+		Name        string
+		Record      Record
+		TagFlag     TagFlag
 		JSONName    string // JSON field name, `json:"<name>"`
 		BinFieldNum uint32 // Field number for binary encoding.
 	}
@@ -144,6 +144,18 @@ func (s StructRecord) Validate() error {
 	return nil
 }
 
+func (RepeatedRecord) assertRecord() {}
+func (RepeatedRecord) Kind() string  { return "repeated" }
+func (rr RepeatedRecord) Validate() error {
+	if rr.Size < 0 && rr.Size != -1 {
+		return fmt.Errorf("invalid size: %d", rr.Size)
+	}
+	if rr.Elem == (ScalarRecord{Name: "uint8"}) {
+		return errors.New("elem of RepeatedRecord cannot be uint8 (should use BytesRecord instead)")
+	}
+	return rr.Elem.Validate()
+}
+
 func (ScalarRecord) assertRecord() {}
 func (ScalarRecord) Kind() string  { return "scalar" }
 func (s ScalarRecord) Validate() error {
@@ -169,7 +181,13 @@ func (or OptionalRecord) Validate() error {
 
 func (BytesRecord) assertRecord() {}
 func (BytesRecord) Kind() string  { return "bytes" }
-func (BytesRecord) Validate() error {
+func (br BytesRecord) Validate() error {
+	if br.String && br.Size != -1 {
+		return errors.New("string BytesRecord must have size = -1")
+	}
+	if br.Size < 0 && br.Size != -1 {
+		return fmt.Errorf("invalid size: %d", br.Size)
+	}
 	return nil
 }
 
@@ -258,8 +276,8 @@ func (p StructField) Tag() []byte {
 		recordTypeI32    = 5
 	)
 
-	// NOTE: here we don't validate whether the type should be a BinFixed64/32
-	// (TODO)
+	// NOTE: here we don't validate whether the type should be a BinFixed64/32.
+	// it's done as part of StructField.Validate.
 	x := uint64(p.BinFieldNum) << 3
 	sr, _ := p.Record.(ScalarRecord)
 	if p.TagFlag&BinFixed64 != 0 || sr.Name == "float64" {
@@ -281,6 +299,10 @@ func (p StructField) WithRecord(rec Record) StructField {
 	return p
 }
 
+func (p StructField) Has(s string) bool {
+	return p.TagFlag.Has(s)
+}
+
 func (p ScalarRecord) IsUnsigned() bool {
 	switch p.Name {
 	case "uint", "uint8", "uint16", "uint32", "uint64":
@@ -291,3 +313,13 @@ func (p ScalarRecord) IsUnsigned() bool {
 		panic(fmt.Sprintf("invalid scalar record for IsUnsigned: %q", p.Name))
 	}
 }
+
+/* TODO: RepeatedRecord
+- If the child is a non-bytelength, then we can encode it in packed form.
+- What is ReprType realy? Should we encode []byte as bytes, even when it's a type of bytes?
+- Consider what will happen when we have []byte as a result of MarshalAmino (ie returns byte, but it's an array).
+- Multidimensional lists (could start off by rejecting them, simply.)
+
+TODO: OptionalRecord
+- Support it in Tag() (should return appropriate tag for underlying OptionalRecord)
+- Support it in StructField.Validate */

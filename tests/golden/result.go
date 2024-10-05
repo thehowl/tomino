@@ -27,39 +27,43 @@ func (msg URLMessage) MarshalBinary() ([]byte, error) {
 
 func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 	 
-		if len(msg.Scheme) > 0 {
 		// field number 1
-		b = append(b, 10, )
 		switch {
+		case len(msg.Scheme) == 0:
+		
+			// nothing to write
+		
 		case len(msg.Scheme) <= maxVarint1:
-			b = append(b, byte(len(msg.Scheme)))
+			b = append(b, (1 << 3) | 2 /* 0x0a */, byte(len(msg.Scheme)))
 			b = append(b, msg.Scheme...)
 		case len(msg.Scheme) <= maxVarint2:
-			b = append(b, byte(len(msg.Scheme) | 0x80), byte(len(msg.Scheme) >> 7))
+			b = append(b, (1 << 3) | 2 /* 0x0a */, byte(len(msg.Scheme) | 0x80), byte(len(msg.Scheme) >> 7))
 			b = append(b, msg.Scheme...)
 		default:
-			b = growBytes(b, 10 + len(msg.Scheme))
+			b = growBytes(b, 1 + 10 + len(msg.Scheme))
+			b = append(b, (1 << 3) | 2 /* 0x0a */)
 			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Scheme)))
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.Scheme...)
-		}
 		} 
-		if len(msg.Opaque) > 0 {
 		// field number 2
-		b = append(b, 18, )
 		switch {
+		case len(msg.Opaque) == 0:
+		
+			// nothing to write
+		
 		case len(msg.Opaque) <= maxVarint1:
-			b = append(b, byte(len(msg.Opaque)))
+			b = append(b, (2 << 3) | 2 /* 0x12 */, byte(len(msg.Opaque)))
 			b = append(b, msg.Opaque...)
 		case len(msg.Opaque) <= maxVarint2:
-			b = append(b, byte(len(msg.Opaque) | 0x80), byte(len(msg.Opaque) >> 7))
+			b = append(b, (2 << 3) | 2 /* 0x12 */, byte(len(msg.Opaque) | 0x80), byte(len(msg.Opaque) >> 7))
 			b = append(b, msg.Opaque...)
 		default:
-			b = growBytes(b, 10 + len(msg.Opaque))
+			b = growBytes(b, 1 + 10 + len(msg.Opaque))
+			b = append(b, (2 << 3) | 2 /* 0x12 */)
 			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Opaque)))
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.Opaque...)
-		}
 		}
 		if msg.User != nil {
 			// use a new "msg" so we can encode the underlying field directly.
@@ -76,119 +80,131 @@ func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 			
 		
 		} 
-		if len(msg.Host) > 0 {
 		// field number 4
-		b = append(b, 34, )
 		switch {
+		case len(msg.Host) == 0:
+		
+			// nothing to write
+		
 		case len(msg.Host) <= maxVarint1:
-			b = append(b, byte(len(msg.Host)))
+			b = append(b, (4 << 3) | 2 /* 0x22 */, byte(len(msg.Host)))
 			b = append(b, msg.Host...)
 		case len(msg.Host) <= maxVarint2:
-			b = append(b, byte(len(msg.Host) | 0x80), byte(len(msg.Host) >> 7))
+			b = append(b, (4 << 3) | 2 /* 0x22 */, byte(len(msg.Host) | 0x80), byte(len(msg.Host) >> 7))
 			b = append(b, msg.Host...)
 		default:
-			b = growBytes(b, 10 + len(msg.Host))
+			b = growBytes(b, 1 + 10 + len(msg.Host))
+			b = append(b, (4 << 3) | 2 /* 0x22 */)
 			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Host)))
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.Host...)
-		}
 		} 
-		if len(msg.Path) > 0 {
 		// field number 5
-		b = append(b, 42, )
 		switch {
+		case len(msg.Path) == 0:
+		
+			// nothing to write
+		
 		case len(msg.Path) <= maxVarint1:
-			b = append(b, byte(len(msg.Path)))
+			b = append(b, (5 << 3) | 2 /* 0x2a */, byte(len(msg.Path)))
 			b = append(b, msg.Path...)
 		case len(msg.Path) <= maxVarint2:
-			b = append(b, byte(len(msg.Path) | 0x80), byte(len(msg.Path) >> 7))
+			b = append(b, (5 << 3) | 2 /* 0x2a */, byte(len(msg.Path) | 0x80), byte(len(msg.Path) >> 7))
 			b = append(b, msg.Path...)
 		default:
-			b = growBytes(b, 10 + len(msg.Path))
+			b = growBytes(b, 1 + 10 + len(msg.Path))
+			b = append(b, (5 << 3) | 2 /* 0x2a */)
 			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Path)))
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.Path...)
-		}
 		} 
-		if len(msg.RawPath) > 0 {
 		// field number 6
-		b = append(b, 50, )
 		switch {
+		case len(msg.RawPath) == 0:
+		
+			// nothing to write
+		
 		case len(msg.RawPath) <= maxVarint1:
-			b = append(b, byte(len(msg.RawPath)))
+			b = append(b, (6 << 3) | 2 /* 0x32 */, byte(len(msg.RawPath)))
 			b = append(b, msg.RawPath...)
 		case len(msg.RawPath) <= maxVarint2:
-			b = append(b, byte(len(msg.RawPath) | 0x80), byte(len(msg.RawPath) >> 7))
+			b = append(b, (6 << 3) | 2 /* 0x32 */, byte(len(msg.RawPath) | 0x80), byte(len(msg.RawPath) >> 7))
 			b = append(b, msg.RawPath...)
 		default:
-			b = growBytes(b, 10 + len(msg.RawPath))
+			b = growBytes(b, 1 + 10 + len(msg.RawPath))
+			b = append(b, (6 << 3) | 2 /* 0x32 */)
 			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.RawPath)))
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.RawPath...)
 		}
-		}
 		 
 			if msg.OmitHost {
 				// field number 7
-				b = append(b, 56,  1)
+				b = append(b, (7 << 3) | 0 /* 0x38 */, 1)
 			}
 		
 		 
 			if msg.ForceQuery {
 				// field number 8
-				b = append(b, 64,  1)
+				b = append(b, (8 << 3) | 0 /* 0x40 */, 1)
 			}
 		 
-		if len(msg.RawQuery) > 0 {
 		// field number 9
-		b = append(b, 74, )
 		switch {
+		case len(msg.RawQuery) == 0:
+		
+			// nothing to write
+		
 		case len(msg.RawQuery) <= maxVarint1:
-			b = append(b, byte(len(msg.RawQuery)))
+			b = append(b, (9 << 3) | 2 /* 0x4a */, byte(len(msg.RawQuery)))
 			b = append(b, msg.RawQuery...)
 		case len(msg.RawQuery) <= maxVarint2:
-			b = append(b, byte(len(msg.RawQuery) | 0x80), byte(len(msg.RawQuery) >> 7))
+			b = append(b, (9 << 3) | 2 /* 0x4a */, byte(len(msg.RawQuery) | 0x80), byte(len(msg.RawQuery) >> 7))
 			b = append(b, msg.RawQuery...)
 		default:
-			b = growBytes(b, 10 + len(msg.RawQuery))
+			b = growBytes(b, 1 + 10 + len(msg.RawQuery))
+			b = append(b, (9 << 3) | 2 /* 0x4a */)
 			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.RawQuery)))
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.RawQuery...)
-		}
 		} 
-		if len(msg.Fragment) > 0 {
 		// field number 10
-		b = append(b, 82, )
 		switch {
+		case len(msg.Fragment) == 0:
+		
+			// nothing to write
+		
 		case len(msg.Fragment) <= maxVarint1:
-			b = append(b, byte(len(msg.Fragment)))
+			b = append(b, (10 << 3) | 2 /* 0x52 */, byte(len(msg.Fragment)))
 			b = append(b, msg.Fragment...)
 		case len(msg.Fragment) <= maxVarint2:
-			b = append(b, byte(len(msg.Fragment) | 0x80), byte(len(msg.Fragment) >> 7))
+			b = append(b, (10 << 3) | 2 /* 0x52 */, byte(len(msg.Fragment) | 0x80), byte(len(msg.Fragment) >> 7))
 			b = append(b, msg.Fragment...)
 		default:
-			b = growBytes(b, 10 + len(msg.Fragment))
+			b = growBytes(b, 1 + 10 + len(msg.Fragment))
+			b = append(b, (10 << 3) | 2 /* 0x52 */)
 			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Fragment)))
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.Fragment...)
-		}
 		} 
-		if len(msg.RawFragment) > 0 {
 		// field number 11
-		b = append(b, 90, )
 		switch {
+		case len(msg.RawFragment) == 0:
+		
+			// nothing to write
+		
 		case len(msg.RawFragment) <= maxVarint1:
-			b = append(b, byte(len(msg.RawFragment)))
+			b = append(b, (11 << 3) | 2 /* 0x5a */, byte(len(msg.RawFragment)))
 			b = append(b, msg.RawFragment...)
 		case len(msg.RawFragment) <= maxVarint2:
-			b = append(b, byte(len(msg.RawFragment) | 0x80), byte(len(msg.RawFragment) >> 7))
+			b = append(b, (11 << 3) | 2 /* 0x5a */, byte(len(msg.RawFragment) | 0x80), byte(len(msg.RawFragment) >> 7))
 			b = append(b, msg.RawFragment...)
 		default:
-			b = growBytes(b, 10 + len(msg.RawFragment))
+			b = growBytes(b, 1 + 10 + len(msg.RawFragment))
+			b = append(b, (11 << 3) | 2 /* 0x5a */)
 			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.RawFragment)))
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.RawFragment...)
-		}
 		}
 
 	return b, nil
@@ -205,12 +221,16 @@ type TestTypeMessage struct {
 	Seconds uint64 `json:"seconds"`
 	Nanoseconds uint32 `json:"nanoseconds"`
 } `json:"Duration"`
-	FixedUint uint64 `json:"FixedUint"`
+	FixedUint uint64 `json:"FixedUint" binary:"fixed64"`
 	Byte uint8 `json:"Byte"`
 	Bytes []byte `json:"Bytes"`
 	ByteArr [4]byte `json:"ByteArr"`
 	ZeroArr [0]byte `json:"ZeroArr"`
 	IntPtr *int `json:"IntPtr"`
+	Slice []struct {
+	A int `json:"A"`
+	B int `json:"B"`
+} `json:"Slice"`
 }
 
 func (msg TestTypeMessage) MarshalBinary() ([]byte, error) {
@@ -229,7 +249,7 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 		
 			if msg.Seconds != 0 {
 			// field number 1
-			b = append(b, 8, )
+			b = append(b, (1 << 3) | 0 /* 0x08 */)
 			b = growBytes(b, 10)
 			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Seconds))]
 			}
@@ -237,31 +257,31 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 		
 			if msg.Nanoseconds != 0 {
 			// field number 2
-			b = append(b, 16, )
+			b = append(b, (2 << 3) | 0 /* 0x10 */)
 			b = growBytes(b, 10)
 			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Nanoseconds))]
 			}
 		
 
 				switch {
-				
 				case len(b) == 0:
+				
 					// empty -- append nothing
 				
 				case len(b) <= maxVarint1:
 					*bprev = growBytes(*bprev, 1 + 1 + len(b))
-					*bprev = append(*bprev, 10, byte(len(b)))
+					*bprev = append(*bprev, (1 << 3) | 2 /* 0x0a */, byte(len(b)))
 					*bprev = append(*bprev, b...)
 				case len(b) <= maxVarint2:
 					*bprev = growBytes(*bprev, 1 + 2 + len(b))
 					*bprev = append(*bprev,
-						10, 
+						(1 << 3) | 2 /* 0x0a */,
 						byte(len(b) | 0x80),
 						byte(len(b) >> 7))
 					*bprev = append(*bprev, b...)
 				default:
 					*bprev = growBytes(*bprev, 1 + 10 + len(b))
-					*bprev = append(*bprev, 10, )
+					*bprev = append(*bprev, (1 << 3) | 2 /* 0x0a */)
 					uvlen := putUvarint((*bprev)[len(*bprev):len(*bprev)+10], uint64(len(b)))
 					*bprev = (*bprev)[:len(*bprev)+uvlen]
 					*bprev = append(*bprev, b[2:]...)
@@ -278,7 +298,7 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 		
 			if msg.Seconds != 0 {
 			// field number 1
-			b = append(b, 8, )
+			b = append(b, (1 << 3) | 0 /* 0x08 */)
 			b = growBytes(b, 10)
 			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Seconds))]
 			}
@@ -286,31 +306,31 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 		
 			if msg.Nanoseconds != 0 {
 			// field number 2
-			b = append(b, 16, )
+			b = append(b, (2 << 3) | 0 /* 0x10 */)
 			b = growBytes(b, 10)
 			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Nanoseconds))]
 			}
 		
 
 				switch {
-				
 				case len(b) == 0:
+				
 					// empty -- append nothing
 				
 				case len(b) <= maxVarint1:
 					*bprev = growBytes(*bprev, 1 + 1 + len(b))
-					*bprev = append(*bprev, 18, byte(len(b)))
+					*bprev = append(*bprev, (2 << 3) | 2 /* 0x12 */, byte(len(b)))
 					*bprev = append(*bprev, b...)
 				case len(b) <= maxVarint2:
 					*bprev = growBytes(*bprev, 1 + 2 + len(b))
 					*bprev = append(*bprev,
-						18, 
+						(2 << 3) | 2 /* 0x12 */,
 						byte(len(b) | 0x80),
 						byte(len(b) >> 7))
 					*bprev = append(*bprev, b...)
 				default:
 					*bprev = growBytes(*bprev, 1 + 10 + len(b))
-					*bprev = append(*bprev, 18, )
+					*bprev = append(*bprev, (2 << 3) | 2 /* 0x12 */)
 					uvlen := putUvarint((*bprev)[len(*bprev):len(*bprev)+10], uint64(len(b)))
 					*bprev = (*bprev)[:len(*bprev)+uvlen]
 					*bprev = append(*bprev, b[2:]...)
@@ -322,41 +342,43 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 				u64 := *(*uint64)(unsafe.Pointer(&msg.FixedUint)) 
 				if u64 != 0 {
 				// field number 3
-				b = append(b, 25, )
+				b = append(b, (3 << 3) | 1 /* 0x19 */)
 				b = growBytes(b, 8)[:len(b)+8]
-				putUint64(b[len(b)-8:len(b)], u64)
+				putUint64(b[len(b)-8:], u64)
 				 } 
 			}
 		
 		
 			if msg.Byte != 0 {
 			// field number 4
-			b = append(b, 32, )
+			b = append(b, (4 << 3) | 0 /* 0x20 */)
 			b = growBytes(b, 10)
 			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Byte))]
 			}
 		 
-		if len(msg.Bytes) > 0 {
 		// field number 5
-		b = append(b, 42, )
 		switch {
+		case len(msg.Bytes) == 0:
+		
+			// nothing to write
+		
 		case len(msg.Bytes) <= maxVarint1:
-			b = append(b, byte(len(msg.Bytes)))
+			b = append(b, (5 << 3) | 2 /* 0x2a */, byte(len(msg.Bytes)))
 			b = append(b, msg.Bytes...)
 		case len(msg.Bytes) <= maxVarint2:
-			b = append(b, byte(len(msg.Bytes) | 0x80), byte(len(msg.Bytes) >> 7))
+			b = append(b, (5 << 3) | 2 /* 0x2a */, byte(len(msg.Bytes) | 0x80), byte(len(msg.Bytes) >> 7))
 			b = append(b, msg.Bytes...)
 		default:
-			b = growBytes(b, 10 + len(msg.Bytes))
+			b = growBytes(b, 1 + 10 + len(msg.Bytes))
+			b = append(b, (5 << 3) | 2 /* 0x2a */)
 			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len(msg.Bytes)))
 			b = b[:len(b)+uvlen]
 			b = append(b, msg.Bytes...)
-		}
 		} // field number 6
 		
 			b = append(b,
 				// tag
-				50, 
+				(6 << 3) | 2 /* 0x32 */,
 				// size
 				4, 
 			)
@@ -375,12 +397,71 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 		
 			if msg.IntPtr != 0 {
 			// field number 8
-			b = append(b, 64, )
+			b = append(b, (8 << 3) | 0 /* 0x40 */)
 			b = growBytes(b, 10)
 			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.IntPtr))]
 			}
 		
 		}
+		// field number 9
+		 
+			for _, el := range msg.Slice {
+				msg := struct { Slice struct {
+	A int `json:"A"`
+	B int `json:"B"`
+} }{ el }
+				
+		// field number 9
+		
+			{
+				bprev := &b
+				b := make([]byte, 0, 16) 
+				msg := msg.Slice
+				
+		
+			if msg.A != 0 {
+			// field number 1
+			b = append(b, (1 << 3) | 0 /* 0x08 */)
+			b = growBytes(b, 10)
+			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.A))]
+			}
+		
+		
+			if msg.B != 0 {
+			// field number 2
+			b = append(b, (2 << 3) | 0 /* 0x10 */)
+			b = growBytes(b, 10)
+			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.B))]
+			}
+		
+
+				switch {
+				case len(b) == 0:
+				
+					// empty -- append nothing
+				
+				case len(b) <= maxVarint1:
+					*bprev = growBytes(*bprev, 1 + 1 + len(b))
+					*bprev = append(*bprev, (9 << 3) | 2 /* 0x4a */, byte(len(b)))
+					*bprev = append(*bprev, b...)
+				case len(b) <= maxVarint2:
+					*bprev = growBytes(*bprev, 1 + 2 + len(b))
+					*bprev = append(*bprev,
+						(9 << 3) | 2 /* 0x4a */,
+						byte(len(b) | 0x80),
+						byte(len(b) >> 7))
+					*bprev = append(*bprev, b...)
+				default:
+					*bprev = growBytes(*bprev, 1 + 10 + len(b))
+					*bprev = append(*bprev, (9 << 3) | 2 /* 0x4a */)
+					uvlen := putUvarint((*bprev)[len(*bprev):len(*bprev)+10], uint64(len(b)))
+					*bprev = (*bprev)[:len(*bprev)+uvlen]
+					*bprev = append(*bprev, b[2:]...)
+				}
+			}
+		
+			}
+		
 
 	return b, nil
 }

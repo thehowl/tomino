@@ -11,6 +11,7 @@ type TestType struct {
 	ByteArr   [4]byte
 	ZeroArr   [0]byte
 	IntPtr    *int
+	Slice     []struct{ A, B int }
 
 	testName string
 }

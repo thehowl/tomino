@@ -81,12 +81,20 @@ func parse(tp types.Type) (ir.Record, error) {
 		if isUint8(tp.Elem()) {
 			return ir.BytesRecord{Size: tp.Len()}, nil
 		}
-		panic("not implemented")
+		elem, err := parse(tp.Elem())
+		if err != nil {
+			return nil, err
+		}
+		return ir.RepeatedRecord{Elem: elem, Size: tp.Len()}, nil
 	case *types.Slice:
 		if isUint8(tp.Elem()) {
 			return ir.BytesRecord{Size: -1}, nil
 		}
-		panic("not implemented")
+		elem, err := parse(tp.Elem())
+		if err != nil {
+			return nil, err
+		}
+		return ir.RepeatedRecord{Elem: elem, Size: -1}, nil
 	case *types.Interface:
 		panic("not implemented")
 	case *types.Named:
