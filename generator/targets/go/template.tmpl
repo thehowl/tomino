@@ -58,157 +58,153 @@ struct {
 {{/* Used to create an encoder for a struct field.
 	Parameter: StructField. */}}
 {{ define "encoder_field" }}
-	{{- if eq .Record.Kind "struct" }}
-		// field number {{ .BinFieldNum }}
-		{{ if eq 0 (len .Record.Fields) }}
-			{{ if .Has "write_empty" }}
-				// (no fields, just encode 0-length)
-				b = append(b, {{ gotag .Tag }}, 0)
-			{{ else }}
-				// (no fields, skip as there is no write_empty)
-			{{ end }}
-		{{ else }}
-			{
-				bprev := &b
-				b := make([]byte, 0, 16) {{/*- TODO: better "guess" for cap. */}}
-				msg := msg.{{ .Name }}
-				{{ template "encoder" .Record }}
-				switch {
-				case len(b) == 0:
-				{{ if .Has "write_empty" }}
-					*brev = append(*bprev, {{ gotag .Tag }}0)
-				{{ else }}
-					// empty -- append nothing
-				{{ end }}
-				case len(b) <= maxVarint1:
-					*bprev = growBytes(*bprev, {{ len .Tag }} + 1 + len(b))
-					*bprev = append(*bprev, {{ gotag .Tag }}, byte(len(b)))
-					*bprev = append(*bprev, b...)
-				case len(b) <= maxVarint2:
-					*bprev = growBytes(*bprev, {{ len .Tag }} + 2 + len(b))
-					*bprev = append(*bprev,
-						{{ gotag .Tag }},
-						byte(len(b) | 0x80),
-						byte(len(b) >> 7))
-					*bprev = append(*bprev, b...)
-				default:
-					*bprev = growBytes(*bprev, {{ len .Tag }} + 10 + len(b))
-					*bprev = append(*bprev, {{ gotag .Tag }})
-					uvlen := putUvarint((*bprev)[len(*bprev):len(*bprev)+10], uint64(len(b)))
-					*bprev = (*bprev)[:len(*bprev)+uvlen]
-					*bprev = append(*bprev, b[2:]...)
-				}
-			}
-		{{ end }}
-	{{- else if eq .Record.Kind "repeated" }}
-		// field number {{ .BinFieldNum }}
-		{{ if eq 0 .Record.Size }} {{/*- [0]T */}}
-			{{ if .Has "write_empty" }}
-				// (0-element array, just encode 0-length)
-				b = append(b, {{ gotag .Tag }}, 0)
-			{{ else }}
-				// (no fields, skip as there is no write_empty)
-			{{ end }}
-		{{ else if ne -1 .Record.Size }} {{/*- array */}}
-			{{ throw "TODO" }}
-		{{ else }} {{/*- slice */}}
-			for _, el := range msg.{{ .Name }} {
-				msg := struct { {{ .Name }} {{ template "type" .Record.Elem }} }{ el }
-				{{ template "encoder_field" (.WithRecord .Record.Elem) }}
-			}
-		{{ end }}
-	{{- else if eq .Record.Kind "scalar" }}
-		{{ if (or (.Has "fixed64") (eq .Name "float64")) }}
-			{
-				u64 := *(*uint64)(unsafe.Pointer(&msg.{{ .Name }})) {{/*- same as math.Float64frombits */}}
-				{{ if not (.Has "write_empty") }}if u64 != 0 { {{- end }}
-				// field number {{ .BinFieldNum }}
-				b = append(b, {{ gotag .Tag }})
-				b = growBytes(b, 8)[:len(b)+8]
-				putUint64(b[len(b)-8:], u64)
-				{{ if not (.Has "write_empty") }} } {{ end }}
-			}
-		{{ else if (or (.Has "fixed32") (eq .Name "float32")) }}
-			{
-				u32 := *(*uint32)(unsafe.Pointer(&msg.{{ .Name }})) {{/*- same as math.Float32frombits */}}
-				{{ if not (.Has "write_empty") }}if u32 != 0 { {{- end }}
-				// field number {{ .BinFieldNum }}
-				b = append(b, {{ gotag .Tag }})
-				b = growBytes(b, 4)[:len(b)+4]
-				putUint32(b[len(b)-4:], u32)
-				{{ if not (.Has "write_empty") }} } {{ end }}
-			}
-		{{ else if eq .Record.Name "bool" }} {{/*- TODO: does using unsafe +direct write make sense here? what's the assembly code? */}}
-			if msg.{{ .Name }} {
-				// field number {{ .BinFieldNum }}
-				b = append(b, {{ gotag .Tag }}, 1)
-			}{{ if .Has "write_empty" }} else {
-				b = append(b, {{ gotag .Tag }}, 0)
-			}{{ end }}
-		{{ else if .Record.IsUnsigned }}
-			{{ if not (.Has "write_empty") }}if msg.{{ .Name }} != 0 { {{- end }}
-			// field number {{ .BinFieldNum }}
-			b = append(b, {{ gotag .Tag }})
-			b = growBytes(b, 10)
-			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.{{ .Name }}))]
-			{{ if not (.Has "write_empty") -}} } {{- end }}
-		{{ else }}
-			{{ if not (.Has "write_empty") }}if msg.{{ .Name }} != 0 { {{- end }}
-			// field number {{ .BinFieldNum }}
-			b = append(b, {{ gotag .Tag }})
-			b = growBytes(b, 10)
-			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.{{ .Name }}))]
-			{{ if not (.Has "write_empty") -}} } {{- end }}
-		{{ end }}
-	{{- else if eq .Record.Kind "optional" }}
-		if msg.{{ .Name }} != nil {
-			// use a new "msg" so we can encode the underlying field directly.
-			// with _ = msg, avoid "unused" warnings.
-			msg := struct { {{ .Name }} {{ template "type" .Record.Elem }} }{ *msg.{{ .Name }} }
-			_ = msg
-
-			{{ template "encoder_field" (.WithRecord .Record.Elem) }}
-		}
-	{{- else if and (eq .Record.Kind "bytes") (eq .Record.Size -1) }} {{/*- slices */}}
-		{{ $f := printf "msg.%s" .Name -}}
-		// field number {{ .BinFieldNum }}
-		switch {
-		case len({{ $f }}) == 0:
+{{- if eq .Record.Kind "struct" }}
+	// field number {{ .BinFieldNum }}
+	{{ if eq 0 (len .Record.Fields) }}
 		{{ if .Has "write_empty" }}
+			// (no fields, just encode 0-length)
 			b = append(b, {{ gotag .Tag }}, 0)
 		{{ else }}
-			// nothing to write
+			// (no fields, skip as there is no write_empty)
 		{{ end }}
-		case len({{ $f }}) <= maxVarint1:
-			b = append(b, {{ gotag .Tag }}, byte(len({{ $f }})))
-			b = append(b, {{ $f }}...)
-		case len({{ $f }}) <= maxVarint2:
-			b = append(b, {{ gotag .Tag }}, byte(len({{ $f }}) | 0x80), byte(len({{ $f }}) >> 7))
-			b = append(b, {{ $f }}...)
-		default:
-			b = growBytes(b, {{ len .Tag }} + 10 + len({{ $f }}))
-			b = append(b, {{ gotag .Tag }})
-			uvlen := putUvarint(b[len(b):len(b)+10], uint64(len({{ $f }})))
-			b = b[:len(b)+uvlen]
-			b = append(b, {{ $f }}...)
+	{{ else }}
+		{
+			startLen := len(b)
+			msg := msg.{{ .Name }}
+			{{ template "encoder" .Record }}
+			encodedSize := uint64(len(b) - startLen)
+
+			switch {
+			case encodedSize == 0:
+			{{ if .Has "write_empty" }}
+				// empty -- append tag and 0 (write_empty).
+				b = append(b, {{ gotag .Tag }}, 0)
+			{{ else }}
+				// empty -- nothing to do.
+			{{ end }}
+			case encodedSize <= maxVarint1:
+				const shift = {{ len .Tag }} + 1
+				b = growBytes(b, shift)[:len(b)+shift]
+				copy(b[startLen+shift:], b[startLen:len(b)-shift])
+				_ = append(b[:startLen], {{ gotag .Tag }}, byte(encodedSize))
+			default:
+				shift := {{ len .Tag }} + uvarintSize(encodedSize) // tag length + uvarint size
+				b = growBytes(b, shift)[:len(b)+shift]
+				copy(b[startLen+shift:], b[startLen:len(b)-shift])
+				_ = append(b[:startLen], {{ gotag .Tag }})
+				putUvarint(b[startLen+{{ len .Tag }}:startLen+shift], encodedSize)
+			}
 		}
-	{{- else if eq .Record.Kind "bytes" }} {{/*- arrays */}}
-		{{- $f := printf "msg.%s" .Name }}
-		// field number {{ .BinFieldNum }}
-		{{ if eq .Record.Size 0 }}
-			// skipped (zero-element array)
+	{{ end }}
+{{- else if eq .Record.Kind "repeated" }}
+	// field number {{ .BinFieldNum }}
+	{{ if eq 0 .Record.Size }} {{/*- [0]T */}}
+		{{ if .Has "write_empty" }}
+			// (0-element array, just encode 0-length)
+			b = append(b, {{ gotag .Tag }}, 0)
 		{{ else }}
-			b = append(b,
-				// tag
-				{{ gotag .Tag }},
-				// size
-				{{ range uvarint .Record.Size }}{{ . }}, {{ end }}
-			)
-			b = append(b, {{ $f }}[:]...)
+			// (no fields, skip as there is no write_empty)
 		{{ end }}
-	{{- else -}}
-		{{ throw "unknown kind %s" .Record.Kind }}
-	{{- end -}}
+	{{ else if ne -1 .Record.Size }} {{/*- array */}}
+		{{ throw "TODO" }}
+	{{ else }} {{/*- slice */}}
+		for _, el := range msg.{{ .Name }} {
+			msg := struct { {{ .Name }} {{ template "type" .Record.Elem }} }{ el }
+			{{ template "encoder_field" (.WithRecord .Record.Elem) }}
+		}
+	{{ end }}
+{{- else if eq .Record.Kind "scalar" }}
+	{{ if (or (.Has "fixed64") (eq .Name "float64")) }}
+		{
+			u64 := *(*uint64)(unsafe.Pointer(&msg.{{ .Name }})) {{/*- same as math.Float64frombits */}}
+			{{ if not (.Has "write_empty") }}if u64 != 0 { {{- end }}
+			// field number {{ .BinFieldNum }}
+			b = append(b, {{ gotag .Tag }})
+			b = growBytes(b, 8)[:len(b)+8]
+			putUint64(b[len(b)-8:], u64)
+			{{ if not (.Has "write_empty") }} } {{ end }}
+		}
+	{{ else if (or (.Has "fixed32") (eq .Name "float32")) }}
+		{
+			u32 := *(*uint32)(unsafe.Pointer(&msg.{{ .Name }})) {{/*- same as math.Float32frombits */}}
+			{{ if not (.Has "write_empty") }}if u32 != 0 { {{- end }}
+			// field number {{ .BinFieldNum }}
+			b = append(b, {{ gotag .Tag }})
+			b = growBytes(b, 4)[:len(b)+4]
+			putUint32(b[len(b)-4:], u32)
+			{{ if not (.Has "write_empty") }} } {{ end }}
+		}
+	{{ else if eq .Record.Name "bool" }} {{/*- TODO: does using unsafe +direct write make sense here? what's the assembly code? */}}
+		if msg.{{ .Name }} {
+			// field number {{ .BinFieldNum }}
+			b = append(b, {{ gotag .Tag }}, 1)
+		}{{ if .Has "write_empty" }} else {
+			b = append(b, {{ gotag .Tag }}, 0)
+		}{{ end }}
+	{{ else if .Record.IsUnsigned }}
+		{{ if not (.Has "write_empty") }}if msg.{{ .Name }} != 0 { {{- end }}
+		// field number {{ .BinFieldNum }}
+		b = append(b, {{ gotag .Tag }})
+		b = growBytes(b, 10)
+		b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.{{ .Name }}))]
+		{{ if not (.Has "write_empty") -}} } {{- end }}
+	{{ else }}
+		{{ if not (.Has "write_empty") }}if msg.{{ .Name }} != 0 { {{- end }}
+		// field number {{ .BinFieldNum }}
+		b = append(b, {{ gotag .Tag }})
+		b = growBytes(b, 10)
+		b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.{{ .Name }}))]
+		{{ if not (.Has "write_empty") -}} } {{- end }}
+	{{ end }}
+{{- else if eq .Record.Kind "optional" }}
+	if msg.{{ .Name }} != nil {
+		// use a new "msg" so we can encode the underlying field directly.
+		// with _ = msg, avoid "unused" warnings.
+		msg := struct { {{ .Name }} {{ template "type" .Record.Elem }} }{ *msg.{{ .Name }} }
+		_ = msg
+
+		{{ template "encoder_field" (.WithRecord .Record.Elem) }}
+	}
+{{- else if and (eq .Record.Kind "bytes") (eq .Record.Size -1) }} {{/*- slices */}}
+	{{ $f := printf "msg.%s" .Name -}}
+	// field number {{ .BinFieldNum }}
+	switch {
+	case len({{ $f }}) == 0:
+	{{ if .Has "write_empty" }}
+		b = append(b, {{ gotag .Tag }}, 0)
+	{{ else }}
+		// nothing to write
+	{{ end }}
+	case len({{ $f }}) <= maxVarint1:
+		b = append(b, {{ gotag .Tag }}, byte(len({{ $f }})))
+		b = append(b, {{ $f }}...)
+	case len({{ $f }}) <= maxVarint2:
+		b = append(b, {{ gotag .Tag }}, byte(len({{ $f }}) | 0x80), byte(len({{ $f }}) >> 7))
+		b = append(b, {{ $f }}...)
+	default:
+		b = growBytes(b, {{ len .Tag }} + 10 + len({{ $f }}))
+		b = append(b, {{ gotag .Tag }})
+		uvlen := putUvarint(b[len(b):len(b)+10], uint64(len({{ $f }})))
+		b = b[:len(b)+uvlen]
+		b = append(b, {{ $f }}...)
+	}
+{{- else if eq .Record.Kind "bytes" }} {{/*- arrays */}}
+	{{- $f := printf "msg.%s" .Name }}
+	// field number {{ .BinFieldNum }}
+	{{ if eq .Record.Size 0 }}
+		// skipped (zero-element array)
+	{{ else }}
+		b = append(b,
+			// tag
+			{{ gotag .Tag }},
+			// size
+			{{ range uvarint .Record.Size }}{{ . }}, {{ end }}
+		)
+		b = append(b, {{ $f }}[:]...)
+	{{ end }}
+{{- else -}}
+	{{ throw "unknown kind %s" .Record.Kind }}
+{{- end -}}
 {{ end }}{{/* end "encoder_field" */}}
 
 {{/* Main entrypoint from Go code.
@@ -227,26 +223,26 @@ import "unsafe"
 // {{ .Source }}
 type {{ $name }} {{ template "type" . }}
 
+// MarshalBinary encodes the data in the message using the generated tomino
+// marshaler. It calls [{{ $name }}.AppendBinary] with a pre-allocated buffer
+// of 64 bytes, as opposed to Go's default of 8, which can improve performance
+// by avoiding extra allocations on low byte counts. For the best performance,
+// re-use buffers with AppendBinary.
 func (msg {{ $name }}) MarshalBinary() ([]byte, error) {
-	return msg.AppendBinary(nil)
+	return msg.AppendBinary(make([]byte, 0, 64))
 }
 
+// AppendBinary encodes the data in the message using the generated tomino
+// marshaler, appending the encoded bytes to b and returning the result.
 func (msg {{ $name }}) AppendBinary(b []byte) ([]byte, error) {
 	{{ template "encoder" . }}
 	return b, nil
 }
 
-{{ end }}
+{{ end -}}
 
 // ---
 // encoding helpers
-
-const (
-	// These are common when encoding lengths, and have fast paths instead of
-	// calling putUvarint.
-	maxVarint1 = (1 << 7) - 1
-	maxVarint2 = (1 << 7) - 1
-)
 
 // Non-generic version of slices.Grow.
 func growBytes(s []byte, n int) []byte {
@@ -254,6 +250,54 @@ func growBytes(s []byte, n int) []byte {
 		s = append(s[:cap(s)], make([]byte, n)...)[:len(s)]
 	}
 	return s
+}
+
+const (
+	// These are common when encoding lengths, and have fast paths instead of
+	// calling putUvarint.
+	maxVarint1 = (1 << 7) - 1
+	maxVarint2 = (1 << 7) - 1
+
+	len8tab = "" +
+		"\x00\x01\x02\x02\x03\x03\x03\x03\x04\x04\x04\x04\x04\x04\x04\x04" +
+		"\x05\x05\x05\x05\x05\x05\x05\x05\x05\x05\x05\x05\x05\x05\x05\x05" +
+		"\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06" +
+		"\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06" +
+		"\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07" +
+		"\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07" +
+		"\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07" +
+		"\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08"
+)
+
+// len64 returns the minimum number of bits required to represent x; the result is 0 for x == 0.
+// from math/bits.
+func len64(x uint64) (n int) {
+	if x >= 1<<32 {
+		x >>= 32
+		n = 32
+	}
+	if x >= 1<<16 {
+		x >>= 16
+		n += 16
+	}
+	if x >= 1<<8 {
+		x >>= 8
+		n += 8
+	}
+	return n + int(len8tab[x])
+}
+
+func uvarintSize(x uint64) int {
+	// +6 allows us to count any "remainder" as a full byte to be encoded.
+	return (len64(x)+6) / 7
 }
 
 // putUvarint encodes a uint64 into buf and returns the number of bytes written.

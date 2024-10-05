@@ -114,24 +114,44 @@ func BenchmarkMarshalers(b *testing.B) {
 		"fixed": {FixedUint: 0xdeadbeef},
 	}
 
+	b.Run("tomino", func(b *testing.B) {
+		for _, name := range sortedMapKeys(tm) {
+			v := tm[name]
+			var dst []byte
+			_ = dst
+			b.Run(name, func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					// assign to dst to prevent optimizations
+					dst, _ = v.MarshalBinary()
+				}
+			})
+		}
+	})
 	buf := make([]byte, 16<<10)
-
-	for _, name := range sortedMapKeys(tm) {
-		v := tm[name]
-		b.Run("tomino_"+name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				_, _ = v.MarshalBinary()
-			}
-		})
-		b.Run("tomino_prealloc_"+name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				_, _ = v.AppendBinary(buf[:0])
-			}
-		})
-		b.Run("amino_"+name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				_, _ = amino.Marshal(v)
-			}
-		})
-	}
+	b.Run("tomino_prealloc", func(b *testing.B) {
+		for _, name := range sortedMapKeys(tm) {
+			v := tm[name]
+			var dst []byte
+			_ = dst
+			b.Run(name, func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					// assign to dst to prevent optimizations
+					dst, _ = v.AppendBinary(buf[:0])
+				}
+			})
+		}
+	})
+	b.Run("amino", func(b *testing.B) {
+		for _, name := range sortedMapKeys(tm) {
+			v := tm[name]
+			var dst []byte
+			_ = dst
+			b.Run(name, func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					// assign to dst to prevent optimizations
+					dst, _ = amino.Marshal(v)
+				}
+			})
+		}
+	})
 }

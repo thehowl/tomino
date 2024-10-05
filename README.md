@@ -35,63 +35,60 @@ We can make it happen.
 This is still in very early stages, but it has some promising results (oct 5, 2024):
 
 ```
-$ go test -v -run '^$' -bench . -benchmem
 goos: linux
 goarch: amd64
 pkg: github.com/thehowl/tomino/tests
 cpu: AMD Ryzen 7 7840U w/ Radeon  780M Graphics
-BenchmarkMarshalers
-BenchmarkMarshalers/tomino_bytes_1_000
-BenchmarkMarshalers/tomino_bytes_1_000-16         	 6028664	       182.1 ns/op	    1024 B/op	       1 allocs/op
-BenchmarkMarshalers/amino_bytes_1_000
-BenchmarkMarshalers/amino_bytes_1_000-16          	 1000000	      1256 ns/op	    2512 B/op	      16 allocs/op
-BenchmarkMarshalers/tomino_bytes_1_000_000
-BenchmarkMarshalers/tomino_bytes_1_000_000-16     	   11679	     93615 ns/op	 1007617 B/op	       1 allocs/op
-BenchmarkMarshalers/amino_bytes_1_000_000
-BenchmarkMarshalers/amino_bytes_1_000_000-16      	    3276	    407786 ns/op	 2015700 B/op	      16 allocs/op
-BenchmarkMarshalers/tomino_empty
-BenchmarkMarshalers/tomino_empty-16               	154738545	         7.692 ns/op	       0 B/op	       0 allocs/op
-BenchmarkMarshalers/amino_empty
-BenchmarkMarshalers/amino_empty-16                	 1884937	       649.6 ns/op	     432 B/op	      12 allocs/op
-BenchmarkMarshalers/tomino_fixed
-BenchmarkMarshalers/tomino_fixed-16               	22836849	        47.17 ns/op	      24 B/op	       2 allocs/op
-BenchmarkMarshalers/amino_fixed
-BenchmarkMarshalers/amino_fixed-16                	 1585255	       774.8 ns/op	     528 B/op	      15 allocs/op
-BenchmarkMarshalers/tomino_ptr_-1337
-BenchmarkMarshalers/tomino_ptr_-1337-16           	21406728	        51.89 ns/op	      24 B/op	       2 allocs/op
-BenchmarkMarshalers/amino_ptr_-1337
-BenchmarkMarshalers/amino_ptr_-1337-16            	 1494553	       688.7 ns/op	     528 B/op	      15 allocs/op
-BenchmarkMarshalers/tomino_slice
-BenchmarkMarshalers/tomino_slice-16               	19513182	        61.68 ns/op	      24 B/op	       2 allocs/op
-BenchmarkMarshalers/amino_slice
-BenchmarkMarshalers/amino_slice-16                	  802430	      1433 ns/op	    1168 B/op	      35 allocs/op
-BenchmarkMarshalers/tomino_time_duration
-BenchmarkMarshalers/tomino_time_duration-16       	13982720	        84.88 ns/op	      64 B/op	       3 allocs/op
-BenchmarkMarshalers/amino_time_duration
-BenchmarkMarshalers/amino_time_duration-16        	 1341182	       899.7 ns/op	     752 B/op	      21 allocs/op
+BenchmarkMarshalers/tomino/bytes_1_000         	 7047403	       144.5 ns/op	    1088 B/op	       2 allocs/op
+BenchmarkMarshalers/tomino/bytes_1_000_000     	   14998	     71262 ns/op	 1007680 B/op	       2 allocs/op
+BenchmarkMarshalers/tomino/empty               	43339066	        27.72 ns/op	      64 B/op	       1 allocs/op
+BenchmarkMarshalers/tomino/fixed               	42246316	        28.32 ns/op	      64 B/op	       1 allocs/op
+BenchmarkMarshalers/tomino/ptr_-1337           	40327893	        29.70 ns/op	      64 B/op	       1 allocs/op
+BenchmarkMarshalers/tomino/slice               	24488661	        43.95 ns/op	      64 B/op	       1 allocs/op
+BenchmarkMarshalers/tomino/time_duration       	24913022	        41.78 ns/op	      64 B/op	       1 allocs/op
+BenchmarkMarshalers/tomino_prealloc/bytes_1_000         	69462626	        17.07 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalers/tomino_prealloc/bytes_1_000_000     	   15192	     71695 ns/op	 1007616 B/op	       1 allocs/op
+BenchmarkMarshalers/tomino_prealloc/empty               	195221311	         6.091 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalers/tomino_prealloc/fixed               	176251285	         6.773 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalers/tomino_prealloc/ptr_-1337           	147158512	         8.137 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalers/tomino_prealloc/slice               	47009396	        21.80 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalers/tomino_prealloc/time_duration       	59409352	        20.14 ns/op	       0 B/op	       0 allocs/op
+BenchmarkMarshalers/amino/bytes_1_000                   	 1319538	       891.0 ns/op	    2512 B/op	      16 allocs/op
+BenchmarkMarshalers/amino/bytes_1_000_000               	    8067	    143878 ns/op	 2015696 B/op	      16 allocs/op
+BenchmarkMarshalers/amino/empty                         	 2431149	       495.1 ns/op	     432 B/op	      12 allocs/op
+BenchmarkMarshalers/amino/fixed                         	 2108006	       563.4 ns/op	     528 B/op	      15 allocs/op
+BenchmarkMarshalers/amino/ptr_-1337                     	 2021954	       575.1 ns/op	     528 B/op	      15 allocs/op
+BenchmarkMarshalers/amino/slice                         	 1005511	      1182 ns/op	    1168 B/op	      35 allocs/op
+BenchmarkMarshalers/amino/time_duration                 	 1615058	       739.3 ns/op	     752 B/op	      21 allocs/op
 PASS
+ok  	github.com/thehowl/tomino/tests	38.245s
 ```
+
+You can find the benchmarks in [tests/amino_test.go](./tests/amino_test.go); they
+are broken down into the following "marshalers":
+
+- `tomino` is a simple call to `MarshalBinary`, which always does an allocation to
+  a 64-byte buffer.
+- `tomino_prealloc` is a call to `AppendBinary`, re-using the same buffer. It shows
+  the raw encoding power, assuming a best-case scenario where we can re-use a
+  buffer.
+- `amino` calls the same structs as before, but using `amino.Marshal`, as a
+  baseline benchmark for comparison.
 
 These are in no way definitive results (I have been writing performant code but
 not inspecting to find any specific slowness; similarly for amino, it may be
 better to at least test it out with proto3 bindings). But as you can see, the
 results are at the very least promising: significantly less heap allocations,
-and performance improvements varying from 2x all the way up to 84x.
+and performance improvements varying from 2x all the way up to ~100x.
 
-> The reason why these results vary greatly are because the tests where the two
-> encoders compare involve great amounts of allocation, due to the nature of the
-> underlying data. ie.: if they both have to allocate 1 megabyte, that's going to be
-> the slowest part for both, so the performance gains aren't that noticeable.
+> The performance improvements against amino can vary greatly, mostly as a
+> consequence of inevitable allocations. For instance, the `bytes_1_000_000`
+> benchmark is close, because for both most of the time will simply be spent
+> allocating the 1-MB slice, anyway.
 >
-> This is most clear in the case for the `bytes_*` benchmarks, which allocate a
-> lot of `B/op`. On the other hand, where encoder/decoder logic is heavily involved,
+> On the other hand, where encoder/decoder logic is heavily involved,
 > (and consequently, `B/op` for both is lower), tomino generally shines, with
-> speed improvements ranging from 10x to 25x mostly.
->
-> 84x is a bit of an outlier, as it only happens for the "empty" case; which in
-> amino's case, literally just executes a few `if` statements which detect
-> everything is empty, and return. But it goes to show what the baseline
-> performance is for the two, even when no encoding is actually happening.
+> speed improvements mostly sitting around ~20x.
 
 There still isn't a decoder. I want to try to get all the current feature-set of
 amino ported over to code generating go marshalers, before starting on the

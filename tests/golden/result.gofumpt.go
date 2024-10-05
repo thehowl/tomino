@@ -24,10 +24,17 @@ type URLMessage struct {
 	RawFragment string    `json:"RawFragment"`
 }
 
+// MarshalBinary encodes the data in the message using the generated tomino
+// marshaler. It calls [URLMessage.AppendBinary] with a pre-allocated buffer
+// of 64 bytes, as opposed to Go's default of 8, which can improve performance
+// by avoiding extra allocations on low byte counts. For the best performance,
+// re-use buffers with AppendBinary.
 func (msg URLMessage) MarshalBinary() ([]byte, error) {
-	return msg.AppendBinary(nil)
+	return msg.AppendBinary(make([]byte, 0, 64))
 }
 
+// AppendBinary encodes the data in the message using the generated tomino
+// marshaler, appending the encoded bytes to b and returning the result.
 func (msg URLMessage) AppendBinary(b []byte) ([]byte, error) {
 	// field number 1
 	switch {
@@ -230,16 +237,22 @@ type TestTypeMessage struct {
 	} `json:"Slice"`
 }
 
+// MarshalBinary encodes the data in the message using the generated tomino
+// marshaler. It calls [TestTypeMessage.AppendBinary] with a pre-allocated buffer
+// of 64 bytes, as opposed to Go's default of 8, which can improve performance
+// by avoiding extra allocations on low byte counts. For the best performance,
+// re-use buffers with AppendBinary.
 func (msg TestTypeMessage) MarshalBinary() ([]byte, error) {
-	return msg.AppendBinary(nil)
+	return msg.AppendBinary(make([]byte, 0, 64))
 }
 
+// AppendBinary encodes the data in the message using the generated tomino
+// marshaler, appending the encoded bytes to b and returning the result.
 func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 	// field number 1
 
 	{
-		bprev := &b
-		b := make([]byte, 0, 16)
+		startLen := len(b)
 		msg := msg.Time
 
 		if msg.Seconds != 0 {
@@ -256,36 +269,31 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Nanoseconds))]
 		}
 
+		encodedSize := uint64(len(b) - startLen)
+
 		switch {
-		case len(b) == 0:
+		case encodedSize == 0:
 
-			// empty -- append nothing
+			// empty -- nothing to do.
 
-		case len(b) <= maxVarint1:
-			*bprev = growBytes(*bprev, 1+1+len(b))
-			*bprev = append(*bprev, (1<<3)|2 /* 0x0a */, byte(len(b)))
-			*bprev = append(*bprev, b...)
-		case len(b) <= maxVarint2:
-			*bprev = growBytes(*bprev, 1+2+len(b))
-			*bprev = append(*bprev,
-				(1<<3)|2, /* 0x0a */
-				byte(len(b)|0x80),
-				byte(len(b)>>7))
-			*bprev = append(*bprev, b...)
+		case encodedSize <= maxVarint1:
+			const shift = 1 + 1
+			b = growBytes(b, shift)[:len(b)+shift]
+			copy(b[startLen+shift:], b[startLen:len(b)-shift])
+			_ = append(b[:startLen], (1<<3)|2 /* 0x0a */, byte(encodedSize))
 		default:
-			*bprev = growBytes(*bprev, 1+10+len(b))
-			*bprev = append(*bprev, (1<<3)|2 /* 0x0a */)
-			uvlen := putUvarint((*bprev)[len(*bprev):len(*bprev)+10], uint64(len(b)))
-			*bprev = (*bprev)[:len(*bprev)+uvlen]
-			*bprev = append(*bprev, b[2:]...)
+			shift := 1 + uvarintSize(encodedSize) // tag length + uvarint size
+			b = growBytes(b, shift)[:len(b)+shift]
+			copy(b[startLen+shift:], b[startLen:len(b)-shift])
+			_ = append(b[:startLen], (1<<3)|2 /* 0x0a */)
+			putUvarint(b[startLen+1:startLen+shift], encodedSize)
 		}
 	}
 
 	// field number 2
 
 	{
-		bprev := &b
-		b := make([]byte, 0, 16)
+		startLen := len(b)
 		msg := msg.Duration
 
 		if msg.Seconds != 0 {
@@ -302,28 +310,24 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 			b = b[:len(b)+putUvarint(b[len(b):len(b)+10], uint64(msg.Nanoseconds))]
 		}
 
+		encodedSize := uint64(len(b) - startLen)
+
 		switch {
-		case len(b) == 0:
+		case encodedSize == 0:
 
-			// empty -- append nothing
+			// empty -- nothing to do.
 
-		case len(b) <= maxVarint1:
-			*bprev = growBytes(*bprev, 1+1+len(b))
-			*bprev = append(*bprev, (2<<3)|2 /* 0x12 */, byte(len(b)))
-			*bprev = append(*bprev, b...)
-		case len(b) <= maxVarint2:
-			*bprev = growBytes(*bprev, 1+2+len(b))
-			*bprev = append(*bprev,
-				(2<<3)|2, /* 0x12 */
-				byte(len(b)|0x80),
-				byte(len(b)>>7))
-			*bprev = append(*bprev, b...)
+		case encodedSize <= maxVarint1:
+			const shift = 1 + 1
+			b = growBytes(b, shift)[:len(b)+shift]
+			copy(b[startLen+shift:], b[startLen:len(b)-shift])
+			_ = append(b[:startLen], (2<<3)|2 /* 0x12 */, byte(encodedSize))
 		default:
-			*bprev = growBytes(*bprev, 1+10+len(b))
-			*bprev = append(*bprev, (2<<3)|2 /* 0x12 */)
-			uvlen := putUvarint((*bprev)[len(*bprev):len(*bprev)+10], uint64(len(b)))
-			*bprev = (*bprev)[:len(*bprev)+uvlen]
-			*bprev = append(*bprev, b[2:]...)
+			shift := 1 + uvarintSize(encodedSize) // tag length + uvarint size
+			b = growBytes(b, shift)[:len(b)+shift]
+			copy(b[startLen+shift:], b[startLen:len(b)-shift])
+			_ = append(b[:startLen], (2<<3)|2 /* 0x12 */)
+			putUvarint(b[startLen+1:startLen+shift], encodedSize)
 		}
 	}
 
@@ -411,8 +415,7 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 		// field number 9
 
 		{
-			bprev := &b
-			b := make([]byte, 0, 16)
+			startLen := len(b)
 			msg := msg.Slice
 
 			if msg.A != 0 {
@@ -429,28 +432,24 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 				b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.B))]
 			}
 
+			encodedSize := uint64(len(b) - startLen)
+
 			switch {
-			case len(b) == 0:
+			case encodedSize == 0:
 
-				// empty -- append nothing
+				// empty -- nothing to do.
 
-			case len(b) <= maxVarint1:
-				*bprev = growBytes(*bprev, 1+1+len(b))
-				*bprev = append(*bprev, (9<<3)|2 /* 0x4a */, byte(len(b)))
-				*bprev = append(*bprev, b...)
-			case len(b) <= maxVarint2:
-				*bprev = growBytes(*bprev, 1+2+len(b))
-				*bprev = append(*bprev,
-					(9<<3)|2, /* 0x4a */
-					byte(len(b)|0x80),
-					byte(len(b)>>7))
-				*bprev = append(*bprev, b...)
+			case encodedSize <= maxVarint1:
+				const shift = 1 + 1
+				b = growBytes(b, shift)[:len(b)+shift]
+				copy(b[startLen+shift:], b[startLen:len(b)-shift])
+				_ = append(b[:startLen], (9<<3)|2 /* 0x4a */, byte(encodedSize))
 			default:
-				*bprev = growBytes(*bprev, 1+10+len(b))
-				*bprev = append(*bprev, (9<<3)|2 /* 0x4a */)
-				uvlen := putUvarint((*bprev)[len(*bprev):len(*bprev)+10], uint64(len(b)))
-				*bprev = (*bprev)[:len(*bprev)+uvlen]
-				*bprev = append(*bprev, b[2:]...)
+				shift := 1 + uvarintSize(encodedSize) // tag length + uvarint size
+				b = growBytes(b, shift)[:len(b)+shift]
+				copy(b[startLen+shift:], b[startLen:len(b)-shift])
+				_ = append(b[:startLen], (9<<3)|2 /* 0x4a */)
+				putUvarint(b[startLen+1:startLen+shift], encodedSize)
 			}
 		}
 
@@ -462,19 +461,60 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 // ---
 // encoding helpers
 
-const (
-	// These are common when encoding lengths, and have fast paths instead of
-	// calling putUvarint.
-	maxVarint1 = (1 << 7) - 1
-	maxVarint2 = (1 << 7) - 1
-)
-
 // Non-generic version of slices.Grow.
 func growBytes(s []byte, n int) []byte {
 	if n -= cap(s) - len(s); n > 0 {
 		s = append(s[:cap(s)], make([]byte, n)...)[:len(s)]
 	}
 	return s
+}
+
+const (
+	// These are common when encoding lengths, and have fast paths instead of
+	// calling putUvarint.
+	maxVarint1 = (1 << 7) - 1
+	maxVarint2 = (1 << 7) - 1
+
+	len8tab = "" +
+		"\x00\x01\x02\x02\x03\x03\x03\x03\x04\x04\x04\x04\x04\x04\x04\x04" +
+		"\x05\x05\x05\x05\x05\x05\x05\x05\x05\x05\x05\x05\x05\x05\x05\x05" +
+		"\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06" +
+		"\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06" +
+		"\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07" +
+		"\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07" +
+		"\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07" +
+		"\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07\x07" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08" +
+		"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08"
+)
+
+// len64 returns the minimum number of bits required to represent x; the result is 0 for x == 0.
+// from math/bits.
+func len64(x uint64) (n int) {
+	if x >= 1<<32 {
+		x >>= 32
+		n = 32
+	}
+	if x >= 1<<16 {
+		x >>= 16
+		n += 16
+	}
+	if x >= 1<<8 {
+		x >>= 8
+		n += 8
+	}
+	return n + int(len8tab[x])
+}
+
+func uvarintSize(x uint64) int {
+	// +6 allows us to count any "remainder" as a full byte to be encoded.
+	return (len64(x) + 6) / 7
 }
 
 // putUvarint encodes a uint64 into buf and returns the number of bytes written.
