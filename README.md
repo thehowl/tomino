@@ -32,8 +32,65 @@ We can make it happen.
 
 ## Status
 
-Very premature. I don't know if I'll have the time to get this to MVP, but I'll
-sure as hell try.
+This is still in very early stages, but it has some promising results (oct 5, 2024):
+
+```
+$ go test -v -run '^$' -bench . -benchmem
+goos: linux
+goarch: amd64
+pkg: github.com/thehowl/tomino/tests
+cpu: AMD Ryzen 7 7840U w/ Radeon  780M Graphics
+BenchmarkMarshalers
+BenchmarkMarshalers/tomino_bytes_1_000
+BenchmarkMarshalers/tomino_bytes_1_000-16         	 6164292	       190.7 ns/op	    1024 B/op	       1 allocs/op
+BenchmarkMarshalers/amino_bytes_1_000
+BenchmarkMarshalers/amino_bytes_1_000-16          	  833690	      1302 ns/op	    2544 B/op	      19 allocs/op
+BenchmarkMarshalers/tomino_bytes_1_000_000
+BenchmarkMarshalers/tomino_bytes_1_000_000-16     	   12324	    129832 ns/op	 1007618 B/op	       1 allocs/op
+BenchmarkMarshalers/amino_bytes_1_000_000
+BenchmarkMarshalers/amino_bytes_1_000_000-16      	    4180	    277993 ns/op	 2015730 B/op	      19 allocs/op
+BenchmarkMarshalers/tomino_empty
+BenchmarkMarshalers/tomino_empty-16               	56545048	        21.57 ns/op	       8 B/op	       1 allocs/op
+BenchmarkMarshalers/amino_empty
+BenchmarkMarshalers/amino_empty-16                	 1602072	       788.8 ns/op	     528 B/op	      16 allocs/op
+BenchmarkMarshalers/tomino_fixed
+BenchmarkMarshalers/tomino_fixed-16               	25409233	        44.94 ns/op	      24 B/op	       2 allocs/op
+BenchmarkMarshalers/amino_fixed
+BenchmarkMarshalers/amino_fixed-16                	 1430749	       824.4 ns/op	     560 B/op	      18 allocs/op
+BenchmarkMarshalers/tomino_ptr_-1337
+BenchmarkMarshalers/tomino_ptr_-1337-16           	21260710	        52.93 ns/op	      32 B/op	       2 allocs/op
+BenchmarkMarshalers/amino_ptr_-1337
+BenchmarkMarshalers/amino_ptr_-1337-16            	 1636072	       751.3 ns/op	     560 B/op	      18 allocs/op
+BenchmarkMarshalers/tomino_slice
+BenchmarkMarshalers/tomino_slice-16               	13637137	        85.76 ns/op	      56 B/op	       3 allocs/op
+BenchmarkMarshalers/amino_slice
+BenchmarkMarshalers/amino_slice-16                	  764563	      1496 ns/op	    1200 B/op	      38 allocs/op
+BenchmarkMarshalers/tomino_time_duration
+BenchmarkMarshalers/tomino_time_duration-16       	11054844	       114.2 ns/op	     112 B/op	       4 allocs/op
+BenchmarkMarshalers/amino_time_duration
+BenchmarkMarshalers/amino_time_duration-16        	 1000000	      1002 ns/op	     784 B/op	      24 allocs/op
+PASS
+ok  	github.com/thehowl/tomino/tests	23.414s
+```
+
+These are in no way definitive results (I have been writing performant code but
+not inspecting to find any specific slowness; similarly for amino, it may be
+better to at least test it out with proto3 bindings). But as you can see, the
+results are at the very least promising: significantly less heap allocations,
+and performance improvements varying from 2x all the way up to 37x.[^1]
+
+[^1]: the reason why these results vary greatly are because the tests where the two
+encoders compare involve great amounts of allocation, due to the nature of the
+underlying data. ie.: if they both have to allocate 1 megabyte, that's going to be
+the slowest part for both, so the performance gains aren't that noticeable. This
+is most clearly the case for the bytes_* benchmarks, which allocate a lot of
+`B/op`. On the other hand, where encoder/decoder logic is heavily involved,
+(and consequently, `B/op` for both is lower), tomino generally shines, with
+speed improvements ranging from 10x to 25x mostly.
+
+There still isn't a decoder. I want to try to get all the current feature-set of
+amino ported over to code generating go marshalers, before starting on the
+decoder, and then heading onto other languages.
 
 If the vision with this thing succeeds, we should at the very least have a tool
 to create amino marshalers/unmarshalers outside of Go. If this vision succeeds
