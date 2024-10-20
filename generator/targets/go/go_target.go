@@ -31,6 +31,9 @@ var tpl = template.Must(template.New("template.tmpl").
 			l := binary.PutUvarint(buf[:], n)
 			return buf[:l]
 		},
+		"typename": func(s ir.StructRecord) string {
+			return s.Name + "Message"
+		},
 		"gotag": func(b []uint8) string {
 			if len(b) == 1 {
 				// one-byte tag: since go evaluates constant expressions at compile time,

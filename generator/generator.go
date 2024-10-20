@@ -4,29 +4,47 @@ import (
 	"fmt"
 	"go/types"
 	"reflect"
+	"slices"
 
 	"github.com/thehowl/tomino/generator/ir"
 )
 
-// Parse contructs an ir.StructRecord from the given Go types.Object.
-// The StructRecord can then be used with programming language specific targets
-// to generate encoder/decoder code.
-func Parse(obj types.Object) (ir.StructRecord, error) {
-	tn, ok := obj.(*types.TypeName)
-	if !ok {
-		return ir.StructRecord{}, fmt.Errorf("invalid symbol: %T", obj)
+// ParseTypes construct ir.StructRecords based on the passed types.
+// The resulting ir.StructRecords can be used to create code-generators in various
+// programming languages.
+func ParseTypes(symbols []types.Object) ([]ir.StructRecord, error) {
+	pctx := &parseCtx{
+		syms: symbols,
+		recs: make([]ir.StructRecord, len(symbols)),
 	}
+	for i, sym := range symbols {
+		tn, ok := sym.(*types.TypeName)
+		if !ok {
+			return nil, fmt.Errorf("invalid symbol type passed to ParseTypes: %T", sym)
+		}
 
-	// TODO: does this work with aliases? (maybe it shouldn't.)
-	tp := tn.Type()
-	rec, err := parse(tp)
-	if err != nil {
-		return ir.StructRecord{}, err
+		// TODO: does this work with aliases? (maybe it shouldn't.)
+		tp := tn.Type()
+		rec, err := pctx.parse(tp, true)
+		if err != nil {
+			return nil, fmt.Errorf("parsing %s: %w", tn.Id(), err)
+		}
+		sr, ok := rec.(ir.StructRecord)
+		if !ok {
+			return nil, fmt.Errorf("parsing non-struct type: %s", tn.Id())
+		}
+		pctx.recs[i] = sr
 	}
-	return rec.(ir.StructRecord), nil
+	return pctx.recs, nil
 }
 
-func parse(tp types.Type) (ir.Record, error) {
+type parseCtx struct {
+	// len(syms) == len(recs)
+	syms []types.Object
+	recs []ir.StructRecord
+}
+
+func (ctx *parseCtx) parse(tp types.Type, isRoot bool) (ir.Record, error) {
 	// TODO: change to custom error type.
 	switch tp := tp.(type) {
 	case *types.Basic:
@@ -45,7 +63,7 @@ func parse(tp types.Type) (ir.Record, error) {
 		if _, isPtr := tp.Elem().Underlying().(*types.Pointer); isPtr {
 			return nil, fmt.Errorf("type %v is pointer of pointer", tp.String())
 		}
-		v, err := parse(tp.Elem())
+		v, err := ctx.parse(tp.Elem(), false)
 		if err != nil {
 			return nil, err
 		}
@@ -70,7 +88,7 @@ func parse(tp types.Type) (ir.Record, error) {
 				continue
 			}
 			var err error
-			sf.Record, err = parse(fld.Type())
+			sf.Record, err = ctx.parse(fld.Type(), false)
 			if err != nil {
 				return nil, err
 			}
@@ -81,7 +99,7 @@ func parse(tp types.Type) (ir.Record, error) {
 		if isUint8(tp.Elem()) {
 			return ir.BytesRecord{Size: tp.Len()}, nil
 		}
-		elem, err := parse(tp.Elem())
+		elem, err := ctx.parse(tp.Elem(), false)
 		if err != nil {
 			return nil, err
 		}
@@ -90,7 +108,7 @@ func parse(tp types.Type) (ir.Record, error) {
 		if isUint8(tp.Elem()) {
 			return ir.BytesRecord{Size: -1}, nil
 		}
-		elem, err := parse(tp.Elem())
+		elem, err := ctx.parse(tp.Elem(), false)
 		if err != nil {
 			return nil, err
 		}
@@ -102,9 +120,22 @@ func parse(tp types.Type) (ir.Record, error) {
 			return sr, nil
 		}
 
+		if !isRoot {
+			// Check if we need to use this symbol, anyway.
+			target := slices.IndexFunc(ctx.syms, func(obj2 types.Object) bool {
+				if obj2.Id() == "" {
+					panic("empty obj id, should not happen")
+				}
+				return obj2.Id() == tp.Obj().Id()
+			})
+			if target >= 0 {
+				return ir.NamedRecord{Elem: &ctx.recs[target]}, nil
+			}
+		}
+
 		// TODO: should centralize names in a registry so we re-use encoders.
 		// TODO: should understand a type having AminoMarshal / AminoUnmarshal.
-		parsed, err := parse(tp.Underlying())
+		parsed, err := ctx.parse(tp.Underlying(), false)
 		if err != nil {
 			return nil, err
 		}

@@ -1,6 +1,9 @@
 package tomtypes
 
-import "time"
+import (
+	"net/url"
+	"time"
+)
 
 type TestType struct {
 	Time      time.Time
@@ -12,6 +15,7 @@ type TestType struct {
 	ZeroArr   [0]byte
 	IntPtr    *int
 	Slice     []struct{ A, B int }
+	URL       url.URL
 
 	testName string
 }

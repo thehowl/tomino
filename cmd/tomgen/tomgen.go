@@ -3,12 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"go/types"
 	"os"
 	"slices"
 	"strings"
 
 	"github.com/thehowl/tomino/generator"
-	"github.com/thehowl/tomino/generator/ir"
 	gotarget "github.com/thehowl/tomino/generator/targets/go"
 	"golang.org/x/tools/go/packages"
 )
@@ -51,7 +51,7 @@ func run(args []string) error {
 		return fmt.Errorf("loading packages: %w", err)
 	}
 
-	records := make([]ir.StructRecord, 0, len(qsym))
+	symbols := make([]types.Object, 0, len(qsym))
 	for _, sym := range qsym {
 		pos := slices.IndexFunc(pkgs, func(pkg *packages.Package) bool { return pkg.PkgPath == sym.pkg })
 		if pos < 0 {
@@ -59,14 +59,11 @@ func run(args []string) error {
 		}
 		pkg := pkgs[pos]
 		obj := pkg.Types.Scope().Lookup(sym.symbol)
-		rec, err := generator.Parse(obj)
-		if err != nil {
-			return err
-		}
-		records = append(records, rec)
-		if err := rec.Validate(); err != nil {
-			return fmt.Errorf("validating IR for %s.%s: %w", sym.pkg, sym.symbol, err)
-		}
+		symbols = append(symbols, obj)
+	}
+	records, err := generator.ParseTypes(symbols)
+	if err != nil {
+		return err
 	}
 	err = gotarget.Write(os.Stdout, records)
 	if err != nil {

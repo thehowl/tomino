@@ -3,7 +3,6 @@ package tests
 import (
 	"cmp"
 	"crypto/sha256"
-	"encoding/hex"
 	"math/rand/v2"
 	"slices"
 	"testing"
@@ -46,6 +45,7 @@ func TestMarshalerCompatibility(t *testing.T) {
 			B int `json:"B"`
 		}{{1, 5}, {0, 4}, {1337, 0}}},
 		"fixed": {FixedUint: 0xdeadbeef},
+		"url":   {URL: tomtypes.URLMessage{Host: "hello", RawQuery: "hey"}},
 	}
 
 	for _, name := range sortedMapKeys(tm) {
@@ -56,10 +56,6 @@ func TestMarshalerCompatibility(t *testing.T) {
 
 			tominoRes, err := v.MarshalBinary()
 			require.NoError(t, err)
-
-			if name == "slice" {
-				t.Log("\n" + hex.Dump(tominoRes))
-			}
 
 			if len(aminoRes) == 0 && len(tominoRes) == 0 {
 				// return here, to avoid any incosistencies like amino returning nil

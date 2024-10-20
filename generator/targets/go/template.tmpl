@@ -7,6 +7,8 @@ Additional functions:
 		Create an error to stop execution of the template.
 	uvarint (n number)
 		Get the uvarint bytes for n. n can be of any type convertible to uint64.
+	typename (sr StructRecord)
+		Returns the type name for sr.
 	gotag (p []uint8)
 		Create list of bytes to be used with append.
 		Prints them as hex characters if len(p) > 1, or as a broken-down
@@ -27,6 +29,8 @@ struct {
 }
 {{- else if eq .Kind "repeated" -}}
 	[{{ if ne .Size -1 }}{{ .Size }}{{ end }}]{{ template "type" .Elem }}
+{{- else if eq .Kind "named" -}}
+	{{ typename .Elem }}
 {{- else if eq .Kind "scalar" -}}
 	{{ .Name }}
 {{- else if eq .Kind "optional" -}}
@@ -96,6 +100,38 @@ struct {
 			}
 		}
 	{{ end }}
+{{- else if eq .Record.Kind "named" -}}
+	{
+		startLen := len(b)
+
+		if b2, err := msg.{{ .Name }}.AppendBinary(b); err != nil {
+			return b2, err
+		} else {
+			b = b2
+		}
+		encodedSize := uint64(len(b) - startLen)
+
+		switch {
+		case encodedSize == 0:
+		{{ if .Has "write_empty" }}
+			// empty -- append tag and 0 (write_empty).
+			b = append(b, {{ gotag .Tag }}, 0)
+		{{ else }}
+			// empty -- nothing to do.
+		{{ end }}
+		case encodedSize <= maxVarint1:
+			const shift = {{ len .Tag }} + 1
+			b = growBytes(b, shift)[:len(b)+shift]
+			copy(b[startLen+shift:], b[startLen:len(b)-shift])
+			_ = append(b[:startLen], {{ gotag .Tag }}, byte(encodedSize))
+		default:
+			shift := {{ len .Tag }} + uvarintSize(encodedSize) // tag length + uvarint size
+			b = growBytes(b, shift)[:len(b)+shift]
+			copy(b[startLen+shift:], b[startLen:len(b)-shift])
+			_ = append(b[:startLen], {{ gotag .Tag }})
+			putUvarint(b[startLen+{{ len .Tag }}:startLen+shift], encodedSize)
+		}
+	}
 {{- else if eq .Record.Kind "repeated" }}
 	// field number {{ .BinFieldNum }}
 	{{ if eq 0 .Record.Size }} {{/*- [0]T */}}
@@ -218,7 +254,7 @@ import "unsafe"
 
 {{ range . -}}
 
-{{- $name := printf "%sMessage" .Name -}}
+{{ $name := typename . -}}
 // {{ $name }} is the tomino message for the type
 // {{ .Source }}
 type {{ $name }} {{ template "type" . }}

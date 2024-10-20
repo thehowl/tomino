@@ -238,6 +238,7 @@ type TestTypeMessage struct {
 	A int `json:"A"`
 	B int `json:"B"`
 } `json:"Slice"`
+	URL URLMessage `json:"URL"`
 }
 
 // MarshalBinary encodes the data in the message using the generated tomino
@@ -470,7 +471,34 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 		}
 	
 		}
-	
+	{
+		startLen := len(b)
+
+		if b2, err := msg.URL.AppendBinary(b); err != nil {
+			return b2, err
+		} else {
+			b = b2
+		}
+		encodedSize := uint64(len(b) - startLen)
+
+		switch {
+		case encodedSize == 0:
+		
+			// empty -- nothing to do.
+		
+		case encodedSize <= maxVarint1:
+			const shift = 1 + 1
+			b = growBytes(b, shift)[:len(b)+shift]
+			copy(b[startLen+shift:], b[startLen:len(b)-shift])
+			_ = append(b[:startLen], (10 << 3) | 2 /* 0x52 */, byte(encodedSize))
+		default:
+			shift := 1 + uvarintSize(encodedSize) // tag length + uvarint size
+			b = growBytes(b, shift)[:len(b)+shift]
+			copy(b[startLen+shift:], b[startLen:len(b)-shift])
+			_ = append(b[:startLen], (10 << 3) | 2 /* 0x52 */)
+			putUvarint(b[startLen+1:startLen+shift], encodedSize)
+		}
+	}
 
 	return b, nil
 }

@@ -91,9 +91,16 @@ type (
 		Size int64
 	}
 
+	// NamedRecord is a named reference to another StructRecord, also encoded in
+	// the same file.
+	NamedRecord struct {
+		// ptr allows self-referencing structures.
+		Elem *StructRecord
+	}
+
 	// interfaces
 	AnyRecord struct {
-		Subset []string
+		Subset []NamedRecord
 	}
 
 	// pointers?
@@ -109,12 +116,6 @@ type (
 		Size int64
 		// A "hint" that this is a string (though nothing should change in marshaling).
 		String bool
-	}
-
-	// can be used as a name in [AnyRecord]
-	NamedRecord struct {
-		Name string
-		Elem Record
 	}
 )
 
@@ -152,6 +153,15 @@ func (rr RepeatedRecord) Validate() error {
 	}
 	if rr.Elem == (ScalarRecord{Name: "uint8"}) {
 		return errors.New("elem of RepeatedRecord cannot be uint8 (should use BytesRecord instead)")
+	}
+	return rr.Elem.Validate()
+}
+
+func (NamedRecord) assertRecord() {}
+func (NamedRecord) Kind() string  { return "named" }
+func (rr NamedRecord) Validate() error {
+	if rr.Elem == nil {
+		return errors.New("NamedRecord has a nil Elem")
 	}
 	return rr.Elem.Validate()
 }
@@ -320,7 +330,7 @@ func (p ScalarRecord) IsUnsigned() bool {
 
 /* TODO: RepeatedRecord
 - If the child is a non-bytelength, then we can encode it in packed form.
-- What is ReprType realy? Should we encode []byte as bytes, even when it's a type of bytes?
+- What is ReprType really? Should we encode []byte as bytes, even when it's a type of bytes?
 - Consider what will happen when we have []byte as a result of MarshalAmino (ie returns byte, but it's an array).
 - Multidimensional lists (could start off by rejecting them, simply.)
 
