@@ -46,6 +46,11 @@ func TestMarshalerCompatibility(t *testing.T) {
 		}{{1, 5}, {0, 4}, {1337, 0}}},
 		"fixed": {FixedUint: 0xdeadbeef},
 		"url":   {URL: tomtypes.URLMessage{Host: "hello", RawQuery: "hey"}},
+		"sub1":  {TReq: tomtypes.TestTypeRequiredMessage{A: 11, B: -8444}},
+		"sub2": {TNotReq: struct {
+			A int   "json:\"A\""
+			B int64 "json:\"B\""
+		}{11, -22}},
 	}
 
 	for _, name := range sortedMapKeys(tm) {

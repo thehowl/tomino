@@ -235,7 +235,12 @@ type TestTypeMessage struct {
 		A int `json:"A"`
 		B int `json:"B"`
 	} `json:"Slice"`
-	URL URLMessage `json:"URL"`
+	URL     URLMessage              `json:"URL"`
+	TReq    TestTypeRequiredMessage `json:"TReq"`
+	TNotReq struct {
+		A int   `json:"A"`
+		B int64 `json:"B"`
+	} `json:"TNotReq"`
 }
 
 // MarshalBinary encodes the data in the message using the generated tomino
@@ -455,6 +460,8 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 		}
 
 	}
+
+	// field number 10
 	{
 		startLen := len(b)
 
@@ -482,6 +489,111 @@ func (msg TestTypeMessage) AppendBinary(b []byte) ([]byte, error) {
 			_ = append(b[:startLen], (10<<3)|2 /* 0x52 */)
 			putUvarint(b[startLen+1:startLen+shift], encodedSize)
 		}
+	}
+	// field number 11
+	{
+		startLen := len(b)
+
+		if b2, err := msg.TReq.AppendBinary(b); err != nil {
+			return b2, err
+		} else {
+			b = b2
+		}
+		encodedSize := uint64(len(b) - startLen)
+
+		switch {
+		case encodedSize == 0:
+
+			// empty -- nothing to do.
+
+		case encodedSize <= maxVarint1:
+			const shift = 1 + 1
+			b = growBytes(b, shift)[:len(b)+shift]
+			copy(b[startLen+shift:], b[startLen:len(b)-shift])
+			_ = append(b[:startLen], (11<<3)|2 /* 0x5a */, byte(encodedSize))
+		default:
+			shift := 1 + uvarintSize(encodedSize) // tag length + uvarint size
+			b = growBytes(b, shift)[:len(b)+shift]
+			copy(b[startLen+shift:], b[startLen:len(b)-shift])
+			_ = append(b[:startLen], (11<<3)|2 /* 0x5a */)
+			putUvarint(b[startLen+1:startLen+shift], encodedSize)
+		}
+	}
+	// field number 12
+
+	{
+		startLen := len(b)
+		msg := msg.TNotReq
+
+		if msg.A != 0 {
+			// field number 1
+			b = append(b, (1<<3)|0 /* 0x08 */)
+			b = growBytes(b, 10)
+			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.A))]
+		}
+
+		if msg.B != 0 {
+			// field number 2
+			b = append(b, (2<<3)|0 /* 0x10 */)
+			b = growBytes(b, 10)
+			b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.B))]
+		}
+
+		encodedSize := uint64(len(b) - startLen)
+
+		switch {
+		case encodedSize == 0:
+
+			// empty -- nothing to do.
+
+		case encodedSize <= maxVarint1:
+			const shift = 1 + 1
+			b = growBytes(b, shift)[:len(b)+shift]
+			copy(b[startLen+shift:], b[startLen:len(b)-shift])
+			_ = append(b[:startLen], (12<<3)|2 /* 0x62 */, byte(encodedSize))
+		default:
+			shift := 1 + uvarintSize(encodedSize) // tag length + uvarint size
+			b = growBytes(b, shift)[:len(b)+shift]
+			copy(b[startLen+shift:], b[startLen:len(b)-shift])
+			_ = append(b[:startLen], (12<<3)|2 /* 0x62 */)
+			putUvarint(b[startLen+1:startLen+shift], encodedSize)
+		}
+	}
+
+	return b, nil
+}
+
+// TestTypeRequiredMessage is the tomino message for the type
+// github.com/thehowl/tomino/tests/golden.TestTypeRequired
+type TestTypeRequiredMessage struct {
+	A int   `json:"A"`
+	B int64 `json:"B"`
+}
+
+// MarshalBinary encodes the data in the message using the generated tomino
+// marshaler. It calls [TestTypeRequiredMessage.AppendBinary] with a pre-allocated buffer
+// of 64 bytes, as opposed to Go's default of 8, which can improve performance
+// by avoiding extra allocations on low byte counts. For the best performance,
+// re-use buffers with AppendBinary.
+func (msg TestTypeRequiredMessage) MarshalBinary() ([]byte, error) {
+	return msg.AppendBinary(make([]byte, 0, 64))
+}
+
+// AppendBinary encodes the data in the message using the generated tomino
+// marshaler, appending the encoded bytes to b and returning the result.
+func (msg TestTypeRequiredMessage) AppendBinary(b []byte) ([]byte, error) {
+	if msg.A != 0 {
+		// field number 1
+		b = append(b, (1<<3)|0 /* 0x08 */)
+		b = growBytes(b, 10)
+		b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.A))]
+	}
+
+	if msg.B != 0 {
+		// field number 2
+		b = append(b, (2<<3)|0 /* 0x10 */)
+		b = growBytes(b, 10)
+		b = b[:len(b)+putVarint(b[len(b):len(b)+10], int64(msg.B))]
 	}
 
 	return b, nil

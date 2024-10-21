@@ -100,7 +100,8 @@ struct {
 			}
 		}
 	{{ end }}
-{{- else if eq .Record.Kind "named" -}}
+{{- else if eq .Record.Kind "named" }}
+	// field number {{ .BinFieldNum }}
 	{
 		startLen := len(b)
 

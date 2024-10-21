@@ -71,6 +71,9 @@ func run(args []string) error {
 	}
 	// TODO: For go specifically, we should codegen both the target, but then do
 	// converter methods as well.
+	// - converting and validating time.Duration and time.Time
+	// - converting types to their underyling (IntKind -> int)
+	// - converting AminoMarshal to the underlying type
 
 	return nil
 }

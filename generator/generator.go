@@ -120,8 +120,11 @@ func (ctx *parseCtx) parse(tp types.Type, isRoot bool) (ir.Record, error) {
 			return sr, nil
 		}
 
+		// TODO: should understand a type having AminoMarshal / AminoUnmarshal.
+
 		if !isRoot {
-			// Check if we need to use this symbol, anyway.
+			// If this is not a root parse(), and we have a type which we're
+			// already going to parse, use that instead.
 			target := slices.IndexFunc(ctx.syms, func(obj2 types.Object) bool {
 				if obj2.Id() == "" {
 					panic("empty obj id, should not happen")
@@ -129,12 +132,14 @@ func (ctx *parseCtx) parse(tp types.Type, isRoot bool) (ir.Record, error) {
 				return obj2.Id() == tp.Obj().Id()
 			})
 			if target >= 0 {
-				return ir.NamedRecord{Elem: &ctx.recs[target]}, nil
+				tobj := ctx.syms[target]
+				if _, ok := tobj.Type().Underlying().(*types.Struct); ok {
+					// Only if the target is a struct.
+					return ir.NamedRecord{Elem: &ctx.recs[target]}, nil
+				}
 			}
 		}
 
-		// TODO: should centralize names in a registry so we re-use encoders.
-		// TODO: should understand a type having AminoMarshal / AminoUnmarshal.
 		parsed, err := ctx.parse(tp.Underlying(), false)
 		if err != nil {
 			return nil, err

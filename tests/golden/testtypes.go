@@ -16,6 +16,19 @@ type TestType struct {
 	IntPtr    *int
 	Slice     []struct{ A, B int }
 	URL       url.URL
+	TReq      TestTypeRequired
+	TNotReq   TestTypeNotRequired
 
 	testName string
 }
+
+type TestTypeNotRequired struct {
+	A int
+	B CustomInt
+}
+
+type CustomInt int64
+
+type TestTypeRequired TestTypeNotRequired
+
+// TODO: type TestTypeAliased = TestTypeNotRequired

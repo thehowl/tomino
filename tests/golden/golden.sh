@@ -4,7 +4,8 @@ cd "$(dirname "$0")"
 
 go run github.com/thehowl/tomino/cmd/tomgen \
     net/url.URL \
-    github.com/thehowl/tomino/tests/golden.TestType > result.go.1 || exit 1
+    github.com/thehowl/tomino/tests/golden.TestType \
+    github.com/thehowl/tomino/tests/golden.TestTypeRequired > result.go.1 || exit 1
 
 diff --color -bsu result.go result.go.1
 sc="$?"
