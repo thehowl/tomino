@@ -18,6 +18,7 @@ type TestType struct {
 	URL       url.URL
 	TReq      TestTypeRequired
 	TNotReq   TestTypeNotRequired
+	M         Msg
 
 	testName string
 }
@@ -30,5 +31,22 @@ type TestTypeNotRequired struct {
 type CustomInt int64
 
 type TestTypeRequired TestTypeNotRequired
+
+type Msg interface {
+	msg()
+}
+
+type MsgCall struct {
+	Caller string
+}
+
+func (MsgCall) msg() {}
+
+type MsgRun struct {
+	Caller  string
+	Program string
+}
+
+func (MsgRun) msg() {}
 
 // TODO: type TestTypeAliased = TestTypeNotRequired

@@ -31,8 +31,15 @@ var tpl = template.Must(template.New("template.tmpl").
 			l := binary.PutUvarint(buf[:], n)
 			return buf[:l]
 		},
-		"typename": func(s ir.StructRecord) string {
-			return s.Name + "Message"
+		"typename": func(s ir.Record) string {
+			switch s := s.(type) {
+			case ir.StructRecord:
+				return s.Name + "Message"
+			case ir.AnyRecord:
+				return s.Name + "Interface"
+			default:
+				panic(fmt.Errorf("invalid ir.Record: %T", s))
+			}
 		},
 		"gotag": func(b []uint8) string {
 			if len(b) == 1 {
@@ -58,6 +65,6 @@ var tpl = template.Must(template.New("template.tmpl").
 	}).
 	Parse(templateSource))
 
-func Write(w io.Writer, messages []ir.StructRecord) error {
+func Write(w io.Writer, messages []ir.Record) error {
 	return tpl.ExecuteTemplate(w, "main", messages)
 }

@@ -9,15 +9,18 @@ import (
 	"github.com/thehowl/tomino/generator/ir"
 )
 
-// ParseTypes construct ir.StructRecords based on the passed types.
-// The resulting ir.StructRecords can be used to create code-generators in various
+// ParseTypes construct ir.Records based on the passed types.
+// The resulting ir.Records can be used to create code-generators in various
 // programming languages.
-func ParseTypes(symbols []types.Object) ([]ir.StructRecord, error) {
+//
+// The resulting top-level ir.Records are only StructRecords or AnyRecords.
+func ParseTypes(symbols []types.Object) ([]ir.Record, error) {
 	pctx := &parseCtx{
 		syms: symbols,
-		recs: make([]ir.StructRecord, len(symbols)),
+		recs: make([]ir.Record, len(symbols)),
 	}
-	for i, sym := range symbols {
+	for i := 0; i < len(pctx.syms); i++ {
+		sym := pctx.syms[i]
 		tn, ok := sym.(*types.TypeName)
 		if !ok {
 			return nil, fmt.Errorf("invalid symbol type passed to ParseTypes: %T", sym)
@@ -29,11 +32,7 @@ func ParseTypes(symbols []types.Object) ([]ir.StructRecord, error) {
 		if err != nil {
 			return nil, fmt.Errorf("parsing %s: %w", tn.Id(), err)
 		}
-		sr, ok := rec.(ir.StructRecord)
-		if !ok {
-			return nil, fmt.Errorf("parsing non-struct type: %s", tn.Id())
-		}
-		pctx.recs[i] = sr
+		pctx.recs[i] = rec
 	}
 	return pctx.recs, nil
 }
@@ -41,7 +40,7 @@ func ParseTypes(symbols []types.Object) ([]ir.StructRecord, error) {
 type parseCtx struct {
 	// len(syms) == len(recs)
 	syms []types.Object
-	recs []ir.StructRecord
+	recs []ir.Record
 }
 
 func (ctx *parseCtx) parse(tp types.Type, isRoot bool) (ir.Record, error) {
@@ -114,7 +113,10 @@ func (ctx *parseCtx) parse(tp types.Type, isRoot bool) (ir.Record, error) {
 		}
 		return ir.RepeatedRecord{Elem: elem, Size: -1}, nil
 	case *types.Interface:
-		panic("not implemented")
+		if tp.NumMethods() != 0 {
+			return nil, fmt.Errorf("only the empty interface is allowed as a non-named interface")
+		}
+		return ir.AnyRecord{}, nil
 	case *types.Named:
 		if sr, ok := findWellKnown(tp); ok {
 			return sr, nil
@@ -131,12 +133,34 @@ func (ctx *parseCtx) parse(tp types.Type, isRoot bool) (ir.Record, error) {
 				}
 				return obj2.Id() == tp.Obj().Id()
 			})
+			// lazily add interfaces to the types to process.
+			if _, ok := tp.Underlying().(*types.Interface); target < 0 && ok {
+				return nil, fmt.Errorf(
+					"interface %v is not listed as a symbol to parse; interfaces need to be explicitly required",
+					tp.String())
+			}
 			if target >= 0 {
-				tobj := ctx.syms[target]
-				if _, ok := tobj.Type().Underlying().(*types.Struct); ok {
-					// Only if the target is a struct.
-					return ir.NamedRecord{Elem: &ctx.recs[target]}, nil
+				return ir.NamedRecord{PtrElem: &ctx.recs[target]}, nil
+			}
+		} else {
+			// interface at root - create the subset.
+			if iface, ok := tp.Underlying().(*types.Interface); ok {
+				irec := ir.AnyRecord{
+					Name:   tp.Obj().Name(),
+					Source: tp.String(),
 				}
+				for idx, other := range ctx.syms {
+					if _, ok := other.Type().Underlying().(*types.Struct); !ok {
+						// Only work on concrete types.
+						continue
+					}
+					if types.Implements(other.Type(), iface) {
+						irec.Subset = append(irec.Subset, ir.NamedRecord{
+							PtrElem: &ctx.recs[idx],
+						})
+					}
+				}
+				return irec, nil
 			}
 		}
 

@@ -68,8 +68,8 @@ type (
 
 	// structs
 	StructRecord struct {
-		Name   string
-		Source string
+		Name   string // URL
+		Source string // net/url.URL
 		Fields []StructField
 	}
 
@@ -94,12 +94,14 @@ type (
 	// NamedRecord is a named reference to another StructRecord, also encoded in
 	// the same file.
 	NamedRecord struct {
-		// ptr allows self-referencing structures.
-		Elem *StructRecord
+		// Pointer to a record, so we can use self-referencing structures.
+		PtrElem *Record
 	}
 
 	// interfaces
 	AnyRecord struct {
+		Name   string
+		Source string
 		Subset []NamedRecord
 	}
 
@@ -160,10 +162,22 @@ func (rr RepeatedRecord) Validate() error {
 func (NamedRecord) assertRecord() {}
 func (NamedRecord) Kind() string  { return "named" }
 func (rr NamedRecord) Validate() error {
-	if rr.Elem == nil {
+	if rr.PtrElem == nil {
 		return errors.New("NamedRecord has a nil Elem")
 	}
-	return rr.Elem.Validate()
+	return (*rr.PtrElem).Validate()
+}
+func (rr NamedRecord) Elem() Record { return *rr.PtrElem }
+
+func (AnyRecord) assertRecord() {}
+func (AnyRecord) Kind() string  { return "any" }
+func (rr AnyRecord) Validate() error {
+	for _, named := range rr.Subset {
+		if err := named.Validate(); err != nil {
+			return fmt.Errorf("invalid AnyRecord: %w", err)
+		}
+	}
+	return nil
 }
 
 func (ScalarRecord) assertRecord() {}
@@ -176,7 +190,7 @@ func (s ScalarRecord) Validate() error {
 		"float32", "float64":
 		return nil
 	default:
-		return fmt.Errorf("invalid scalar record: %q", s.Name)
+		return fmt.Errorf("invalid ScalarRecord: %q", s.Name)
 	}
 }
 
@@ -335,4 +349,7 @@ func (p ScalarRecord) IsUnsigned() bool {
 - Multidimensional lists (could start off by rejecting them, simply.)
 
 TODO: OptionalRecord
-- Support it in StructField.Validate */
+- Support it in StructField.Validate
+
+TODO: AnyRecord
+- Support encoding MVP */
